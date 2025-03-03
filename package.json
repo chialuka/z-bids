@@ -10,16 +10,18 @@
   },
   "dependencies": {
     "@azure/identity": "^4.7.0",
+    "@heroui/react": "^2.7.4",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@pnp/nodejs": "^4.10.0",
     "@pnp/sp": "^4.10.0",
+    "framer-motion": "^12.4.7",
     "next": "15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

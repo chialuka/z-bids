@@ -1,48 +1,13 @@
-import { getLists } from "./modules/sharepoint";
-
-type File = {
-	name: string;
-	webUrl: string;
-	id: string;
-	createdBy: {
-		user: {
-			displayName: string;
-			email: string;
-			id: string;
-		};
-	};
-	createdDateTime: string;
-};
+import { getSharePointFiles } from "./modules/sharepoint";
+import GetSharePointFiles from "./rfp/SharePointFiles";
 
 export default async function Home() {
-	console.log("Getting lists");
-	const files = await getLists();
-	console.log({ files });
+	const sharePointFiles = await getSharePointFiles();
+
 	return (
 		<div>
-			<h1>RFP</h1>
-			{files.length ? (
-				<table>
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Created By</th>
-							<th>Created Date</th>
-						</tr>
-					</thead>
-					<tbody>
-						{files.map((file: File) => (
-							<tr key={file.id}>
-								<td><a href={file.webUrl}>{file.name}</a></td>
-								<td>{file.createdBy.user.displayName}</td>
-								<td>{new Date(file.createdDateTime).toLocaleDateString()}</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			) : (
-				<p>No files found.</p>
-			)}
+			<h1 className="font-bold text-3xl text-center">Z BIDS</h1>
+			<GetSharePointFiles files={sharePointFiles} />
 		</div>
 	);
 }
