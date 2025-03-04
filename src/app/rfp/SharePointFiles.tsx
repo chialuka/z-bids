@@ -7,7 +7,7 @@ import {
 	TableColumn,
 	TableRow,
 	TableCell,
-} from "@heroui/table";
+} from "@heroui/react";
 
 type File = {
 	name: string;

@@ -5,9 +5,9 @@ export default async function Home() {
 	const sharePointFiles = await getSharePointFiles();
 
 	return (
-		<div>
-			<h1 className="font-bold text-3xl text-center">Z BIDS</h1>
+		<main className="m-10">
+			<h1 className="font-bold text-3xl text-center py-10">Z BIDS</h1>
 			<GetSharePointFiles files={sharePointFiles} />
-		</div>
+		</main>
 	);
 }
