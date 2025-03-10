@@ -1,4 +1,4 @@
-import { getSharePointFiles } from "./modules/sharepoint";
+import { getSharePointFiles } from "../server/modules/sharepoint";
 import GetSharePointFiles from "./rfp/SharePointFiles";
 
 export default async function Home() {

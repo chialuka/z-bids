@@ -14,10 +14,13 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@pnp/nodejs": "^4.10.0",
     "@pnp/sp": "^4.10.0",
+    "@uploadthing/react": "^7.3.0",
+    "axios": "^1.8.1",
     "framer-motion": "^12.4.7",
     "next": "15.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "uploadthing": "^7.5.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
