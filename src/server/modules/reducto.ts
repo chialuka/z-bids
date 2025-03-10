@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const parseFile = async ({ documentUrl }: { documentUrl: string }) => {
   try {
-    console.log(process.env.REDUCTO_API_KEY, "the reducto api key");
+    console.log(process.env.REDUCTO_API_KEY, "the reducto api key", documentUrl);
     const file = await axios({
       url: "https://platform.reducto.ai/parse",
       method: "POST",
