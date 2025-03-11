@@ -1,5 +1,6 @@
 import { getSharePointFiles } from "../server/modules/sharepoint";
 import GetSharePointFiles from "./rfp/SharePointFiles";
+// import { Assistant } from "./assistant"
 
 export default async function Home() {
 	const sharePointFiles = await getSharePointFiles();
@@ -8,6 +9,7 @@ export default async function Home() {
 		<main className="m-10">
 			<h1 className="font-bold text-3xl text-center py-10">Z BIDS</h1>
 			<GetSharePointFiles files={sharePointFiles} />
+      {/* <Assistant /> */}
 		</main>
 	);
 }
