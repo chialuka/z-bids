@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.2.1",
+    "@api/reducto": "file:.api/apis/reducto",
     "@assistant-ui/react": "^0.8.5",
     "@assistant-ui/react-ai-sdk": "^0.8.0",
     "@assistant-ui/react-markdown": "^0.8.0",
