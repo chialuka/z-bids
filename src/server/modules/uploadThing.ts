@@ -1,11 +1,19 @@
 import { UTApi } from "uploadthing/server";
 
+
+if (!process.env.UPLOADTHING_TOKEN) {
+  throw new Error("UPLOADTHING_TOKEN is not set");
+}
+
+export const utApi = new UTApi({ token: process.env.UPLOADTHING_TOKEN });
+
 export const listAllFiles = async () => {
-	if (!process.env.UPLOADTHING_TOKEN) {
-		throw new Error("UPLOADTHING_TOKEN is not set");
-	}
-	const ut = new UTApi({ token: process.env.UPLOADTHING_TOKEN });
-	const files = await ut.listFiles();
-  console.log({ files });
-	return files.files;
+  try {
+    const files = await utApi.listFiles();
+    console.log({ files });
+    return files.files;
+  } catch (error) {
+    console.error(error);
+    return error;
+  }
 };
