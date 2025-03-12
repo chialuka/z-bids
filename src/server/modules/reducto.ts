@@ -11,8 +11,7 @@ export const parseFile = async ({ documentUrl }: { documentUrl: string }) => {
 			Authorization: `Bearer ${process.env.REDUCTO_API_KEY}`,
 		},
 		data: {
-			document_url:
-				"https://pa6rt2x38u.ufs.sh/f/4o4hdZi2cLBoNyUss4SEBa4kdGCJl1UK89s5XR0tASPiLoOm",
+			document_url: documentUrl,
 		},
 	});
 

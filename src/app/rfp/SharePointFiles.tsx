@@ -16,20 +16,9 @@ import {
 } from "@heroui/react";
 import { useState } from "react";
 import { MagnifyingGlassIcon as SearchIcon } from "@heroicons/react/24/outline";
+import DOMPurify from 'dompurify';
 
-type File = {
-	name: string;
-	webUrl: string;
-	id: string;
-	createdBy: {
-		user: {
-			displayName: string;
-			email: string;
-			id: string;
-		};
-	};
-	createdDateTime: string;
-};
+import { File } from "@/types";
 
 export default function GetSharePointFiles({ files }: { files: File[] }) {
 	const [content, setContent] = useState<string>("");
@@ -46,7 +35,9 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 		setIsLoading(true);
 		fetch("/api/reducto", {
 			method: "POST",
-			body: JSON.stringify({ documentUrl: file.webUrl }),
+			body: JSON.stringify({
+				documentUrl: `https://pa6rt2x38u.ufs.sh/f/${file.key}`,
+			}),
 		}).then(async (res) => {
 			const response = await res.json();
 			console.log(response.data.result.chunks, "response");
@@ -71,7 +62,10 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 		}).then(async (res) => {
 			const response = await res.json();
 			console.log(response, "response");
-			setChatResponse(response.data);
+
+      // Sanitize the response to prevent XSS attacks
+      const safeHtml = DOMPurify.sanitize(response.data);
+			setChatResponse(safeHtml);
 			setIsLoadingChatResponse(false);
 
 			return response;
@@ -88,7 +82,7 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 						<Table aria-label="Table of SharePoint Files">
 							<TableHeader>
 								<TableColumn>Name</TableColumn>
-								<TableColumn>Created By</TableColumn>
+								{/* <TableColumn>Created By</TableColumn> */}
 								<TableColumn>Created Date</TableColumn>
 							</TableHeader>
 							<TableBody>
@@ -99,9 +93,9 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 										className="cursor-pointer"
 									>
 										<TableCell>{file.name}</TableCell>
-										<TableCell>{file.createdBy.user.displayName}</TableCell>
+										{/* <TableCell>{file.createdBy.user.displayName}</TableCell> */}
 										<TableCell>
-											{new Date(file.createdDateTime).toLocaleDateString()}
+											{new Date(file.uploadedAt).toLocaleDateString()}
 										</TableCell>
 									</TableRow>
 								))}
@@ -124,27 +118,35 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 					</ModalHeader>
 					<ModalBody>
 						<div className="p-10">
-							<Input
-								placeholder="Search File"
-								value={searchTerm}
-								name="searchTerm"
-								onChange={(e) => setSearchTerm(e.target.value)}
-								onKeyDown={(e) => e.key === "Enter" && searchFile(searchTerm)}
-								endContent={
-									<SearchIcon
-										onClick={() => searchFile(searchTerm)}
-										className="h-6 w-6 text-gray-400 cursor-pointer"
-									/>
-								}
-								className="py-10"
-							/>
-							{isLoadingChatResponse ? (
-								<Spinner />
-							) : (
-								<p className="pt-5 pb-10">{chatResponse}</p>
-							)}
+              <div>
+                <Input
+                  placeholder="Search File"
+                  value={searchTerm}
+                  name="searchTerm"
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && searchFile(searchTerm)}
+                  endContent={
+                    <SearchIcon
+                      onClick={() => searchFile(searchTerm)}
+                      className="h-6 w-6 text-gray-400 cursor-pointer"
+                    />
+                  }
+                  className="py-10"
+                />
+                {isLoadingChatResponse ? (
+                  <Spinner />
+                ) : (
+                  // This has been sanitized to prevent XSS attacks
+                  <div
+                    className="pt-5 pb-10 mb-5 bg-gray-100 p-4 rounded-lg border border-gray-300"
+                    dangerouslySetInnerHTML={{ __html: chatResponse }}
+                  />
+                )}
+              </div>
 							<div>
-								<p className="font-bold text-center text-xl">Document Summary</p>
+								<p className="font-bold text-center text-xl">
+									Document Summary
+								</p>
 								<p>{content}</p>
 							</div>
 						</div>

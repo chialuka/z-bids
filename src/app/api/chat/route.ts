@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     messages: [
       {
         role: "system",
-        content: "You are a helpful assistant that answers questions about PDF documents accurately and concisely."
+        content: "You are a helpful assistant that answers questions about PDF documents accurately and concisely. Please return all responses as valid HTML. Do not use Markdown backticks."
       },
       {
         role: "user",

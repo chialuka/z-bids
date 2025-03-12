@@ -6,6 +6,7 @@ import "@pnp/sp/folders";
 import { ClientSecretCredential } from "@azure/identity";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
+import { listAllFiles } from "./uploadThing";
 
 export const getSharePointFiles = async () => {
 	try {
@@ -81,6 +82,8 @@ export const getSharePointFiles = async () => {
 			.api(`/sites/${siteResponse.id}/drives/${driveId}/root/children`)
 			.get();
 
+		const allFiles = await listAllFiles();
+    console.log({ allFiles });
 		console.log("Files:", filesResponse.value);
 		return filesResponse.value;
 	} catch (error) {
