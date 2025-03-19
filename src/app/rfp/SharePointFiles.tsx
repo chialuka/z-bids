@@ -14,11 +14,12 @@ import {
 	Spinner,
 	Input,
 } from "@heroui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MagnifyingGlassIcon as SearchIcon } from "@heroicons/react/24/outline";
-import DOMPurify from 'dompurify';
+import DOMPurify from "dompurify";
 
 import { File } from "@/types";
+import { documentsTable } from "@/server/db/schema";
 
 export default function GetSharePointFiles({ files }: { files: File[] }) {
 	const [content, setContent] = useState<string>("");
@@ -29,29 +30,46 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 	const [isLoadingChatResponse, setIsLoadingChatResponse] =
 		useState<boolean>(false);
 	const [chatResponse, setChatResponse] = useState<string>("");
+  const [allDocuments, setAllDocuments] = useState<typeof documentsTable.$inferSelect[]>([]);
+
+  useEffect(() => {
+    fetch("/api/supabase").then(async (res) => {
+      const response = await res.json();
+      console.log(response, "response");
+      setAllDocuments(response.allDocuments);
+    });
+  }, []);
 
 	const parseFile = (file: File) => {
 		setOpenFileName(file.name);
 		setIsLoading(true);
-		fetch("/api/reducto", {
-			method: "POST",
-			body: JSON.stringify({
-				documentUrl: `https://pa6rt2x38u.ufs.sh/f/${file.key}`,
-			}),
-		}).then(async (res) => {
-			const response = await res.json();
-			console.log(response.data.result.chunks, "response");
-			setContent(
-				response.data.result.chunks
-					.map((chunk: { blocks: Array<{ content: string }> }) =>
-						chunk.blocks.map((block) => block.content).join("")
-					)
-					.join("")
-			);
-			setIsLoading(false);
-			setIsModalOpen(true);
-			return response;
-		});
+    const documentExists = allDocuments?.find((doc) => doc.name === file.name);
+    if (documentExists && documentExists.content) {
+      setContent(documentExists.content);
+    } else {
+      fetch("/api/reducto", {
+        method: "POST",
+        body: JSON.stringify({
+          documentUrl: `https://pa6rt2x38u.ufs.sh/f/${file.key}`,
+        }),
+      }).then(async (res) => {
+        const response = await res.json();
+        console.log(response, "response");
+        // Sanitize the response to prevent XSS attacks
+        const safeHtml = DOMPurify.sanitize(response.data);
+        setContent(safeHtml);
+        await fetch("/api/supabase", {
+          method: "POST",
+          body: JSON.stringify({
+            name: file.name,
+            content: safeHtml,
+          }),
+        });
+      });
+      
+    }
+    setIsLoading(false);
+    setIsModalOpen(true);
 	};
 
 	const searchFile = (searchTerm: string) => {
@@ -63,8 +81,8 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 			const response = await res.json();
 			console.log(response, "response");
 
-      // Sanitize the response to prevent XSS attacks
-      const safeHtml = DOMPurify.sanitize(response.data);
+			// Sanitize the response to prevent XSS attacks
+			const safeHtml = DOMPurify.sanitize(response.data);
 			setChatResponse(safeHtml);
 			setIsLoadingChatResponse(false);
 
@@ -108,7 +126,7 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 			</div>
 			<Modal
 				isOpen={isModalOpen}
-				size="5xl"
+				size="full"
 				onClose={() => setIsModalOpen(false)}
 				scrollBehavior="inside"
 			>
@@ -118,36 +136,36 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 					</ModalHeader>
 					<ModalBody>
 						<div className="p-10">
-              <div>
-                <Input
-                  placeholder="Search File"
-                  value={searchTerm}
-                  name="searchTerm"
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && searchFile(searchTerm)}
-                  endContent={
-                    <SearchIcon
-                      onClick={() => searchFile(searchTerm)}
-                      className="h-6 w-6 text-gray-400 cursor-pointer"
-                    />
-                  }
-                  className="py-10"
-                />
-                {isLoadingChatResponse ? (
-                  <Spinner />
-                ) : (
-                  // This has been sanitized to prevent XSS attacks
-                  <div
-                    className="pt-5 pb-10 mb-5 bg-gray-100 p-4 rounded-lg border border-gray-300"
-                    dangerouslySetInnerHTML={{ __html: chatResponse }}
-                  />
-                )}
-              </div>
+							<div>
+								<Input
+									placeholder="Search File"
+									value={searchTerm}
+									name="searchTerm"
+									onChange={(e) => setSearchTerm(e.target.value)}
+									onKeyDown={(e) => e.key === "Enter" && searchFile(searchTerm)}
+									endContent={
+										<SearchIcon
+											onClick={() => searchFile(searchTerm)}
+											className="h-6 w-6 text-gray-400 cursor-pointer"
+										/>
+									}
+									className="py-10"
+								/>
+								{isLoadingChatResponse ? (
+									<Spinner />
+								) : (
+									// This has been sanitized to prevent XSS attacks
+									<div
+										className="pt-5 pb-10 mb-5 bg-gray-100 p-4 rounded-lg border border-gray-300"
+										dangerouslySetInnerHTML={{ __html: chatResponse }}
+									/>
+								)}
+							</div>
 							<div>
 								<p className="font-bold text-center text-xl">
-									Document Summary
+									Compliance Matrix
 								</p>
-								<p>{content}</p>
+								<div dangerouslySetInnerHTML={{ __html: content }} />
 							</div>
 						</div>
 					</ModalBody>
