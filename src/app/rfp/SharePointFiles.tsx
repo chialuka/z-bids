@@ -13,6 +13,7 @@ import {
 	ModalBody,
 	Spinner,
 	Input,
+	Button,
 } from "@heroui/react";
 import { useEffect, useState } from "react";
 import { MagnifyingGlassIcon as SearchIcon } from "@heroicons/react/24/outline";
@@ -20,7 +21,7 @@ import DOMPurify from "dompurify";
 
 import { File } from "@/types";
 import { documentsTable } from "@/server/db/schema";
-
+import Editor from "@/components/tiptap/Editor";
 export default function GetSharePointFiles({ files }: { files: File[] }) {
 	const [content, setContent] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -30,46 +31,54 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 	const [isLoadingChatResponse, setIsLoadingChatResponse] =
 		useState<boolean>(false);
 	const [chatResponse, setChatResponse] = useState<string>("");
-  const [allDocuments, setAllDocuments] = useState<typeof documentsTable.$inferSelect[]>([]);
+	const [allDocuments, setAllDocuments] = useState<
+		(typeof documentsTable.$inferSelect)[]
+	>([]);
+	const [isEditMode, setIsEditMode] = useState<boolean>(true);
+	const [documentId, setDocumentId] = useState<string>("");
 
-  useEffect(() => {
-    fetch("/api/supabase").then(async (res) => {
-      const response = await res.json();
-      console.log(response, "response");
-      setAllDocuments(response.allDocuments);
-    });
-  }, []);
+	console.log(isEditMode, "isEditMode");
+
+	useEffect(() => {
+		fetch("/api/supabase").then(async (res) => {
+			const response = await res.json();
+			setAllDocuments(response.allDocuments);
+		});
+
+    // Use this value to trigger the content to update after an edit
+	}, [isEditMode]);
 
 	const parseFile = (file: File) => {
 		setOpenFileName(file.name);
 		setIsLoading(true);
-    const documentExists = allDocuments?.find((doc) => doc.name === file.name);
-    if (documentExists && documentExists.content) {
-      setContent(documentExists.content);
-    } else {
-      fetch("/api/reducto", {
-        method: "POST",
-        body: JSON.stringify({
-          documentUrl: `https://pa6rt2x38u.ufs.sh/f/${file.key}`,
-        }),
-      }).then(async (res) => {
-        const response = await res.json();
-        console.log(response, "response");
-        // Sanitize the response to prevent XSS attacks
-        const safeHtml = DOMPurify.sanitize(response.data);
-        setContent(safeHtml);
-        await fetch("/api/supabase", {
-          method: "POST",
-          body: JSON.stringify({
-            name: file.name,
-            content: safeHtml,
-          }),
-        });
-      });
-      
-    }
-    setIsLoading(false);
-    setIsModalOpen(true);
+		const documentExists = allDocuments?.find((doc) => doc.name === file.name);
+		if (documentExists && documentExists.content) {
+			setContent(documentExists.content);
+			setDocumentId(documentExists.id.toString());
+		} else {
+			fetch("/api/reducto", {
+				method: "POST",
+				body: JSON.stringify({
+					documentUrl: `https://pa6rt2x38u.ufs.sh/f/${file.key}`,
+				}),
+			}).then(async (res) => {
+				const response = await res.json();
+				// Sanitize the response to prevent XSS attacks
+				const safeHtml = DOMPurify.sanitize(response.data);
+				setContent(safeHtml);
+				const newDocument = await fetch("/api/supabase", {
+					method: "POST",
+					body: JSON.stringify({
+						name: file.name,
+						content: safeHtml,
+					}),
+				});
+				const newDocumentResponse = await newDocument.json();
+				setDocumentId(newDocumentResponse.id);
+			});
+		}
+		setIsLoading(false);
+		setIsModalOpen(true);
 	};
 
 	const searchFile = (searchTerm: string) => {
@@ -79,7 +88,6 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 			body: JSON.stringify({ messages: { searchTerm, document: content } }),
 		}).then(async (res) => {
 			const response = await res.json();
-			console.log(response, "response");
 
 			// Sanitize the response to prevent XSS attacks
 			const safeHtml = DOMPurify.sanitize(response.data);
@@ -87,6 +95,20 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 			setIsLoadingChatResponse(false);
 
 			return response;
+		});
+	};
+
+	const saveContent = async ({
+		id,
+		content,
+	}: {
+		id: string;
+		content: string;
+	}) => {
+		setIsEditMode(false);
+		await fetch("/api/supabase", {
+			method: "PATCH",
+			body: JSON.stringify({ id, content }),
 		});
 	};
 
@@ -165,7 +187,51 @@ export default function GetSharePointFiles({ files }: { files: File[] }) {
 								<p className="font-bold text-center text-xl">
 									Compliance Matrix
 								</p>
-								<div dangerouslySetInnerHTML={{ __html: content }} />
+								<Editor content={content} editable={isEditMode} setContent={setContent} />
+								<div className="flex justify-end gap-3 mt-4 mb-2">
+									<Button
+										className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center"
+										onPress={() => setIsEditMode(true)}
+										isDisabled={isEditMode}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											className="h-4 w-4 mr-2"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+											/>
+										</svg>
+										Edit
+									</Button>
+									<Button
+										className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center"
+										onPress={() => saveContent({ id: documentId, content })}
+										isDisabled={!isEditMode}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											className="h-4 w-4 mr-2"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M5 13l4 4L19 7"
+											/>
+										</svg>
+										Save
+									</Button>
+								</div>
 							</div>
 						</div>
 					</ModalBody>
