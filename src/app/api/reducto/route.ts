@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseFile } from "@/server/modules/reducto";
-import { extractComplianceMatrix } from "@/server/modules/openai";
+import { extractCoverSheet } from "@/server/modules/openai";
 
 export async function POST(request: Request) {
 	try {
@@ -18,11 +18,14 @@ export async function POST(request: Request) {
 					chunk.blocks.map((block) => block.content).join("")
 				)
 				.join("");
-			const complianceMatrix = await extractComplianceMatrix({
+			const coverSheet = await extractCoverSheet({
 				document: content,
 			});
-      console.log({ complianceMatrix })
-			return NextResponse.json({ data: complianceMatrix });
+      console.log({ coverSheet });
+
+			return NextResponse.json({ 
+        data: coverSheet
+      });
 		}
 	} catch (error) {
 		console.error(error);

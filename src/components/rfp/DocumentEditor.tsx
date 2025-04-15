@@ -38,7 +38,7 @@ export default function DocumentEditor({
 
 	return (
 		<div>
-			<p className="font-bold text-center text-xl">Compliance Matrix</p>
+			<p className="font-bold text-center text-xl">Cover Sheet</p>
 			{isEditMode ? (
 				<Editor
 					content={content}

@@ -10,7 +10,7 @@ export default async function Home() {
   console.log({ allFiles });
 
 	return (
-		<main className="m-10">
+		<main className="m-2 sm:m-5 lg:m-10">
 			<h1 className="font-bold text-3xl text-center py-10">Z BIDS</h1>
 			<RFPFiles files={allFiles} />
       {/* <Assistant /> */}

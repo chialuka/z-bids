@@ -10,9 +10,18 @@ interface DocumentData {
  * Fetches all documents from the database
  */
 export async function fetchAllDocuments() {
-  const response = await fetch("/api/supabase");
-  const data = await response.json();
-  return data.allDocuments;
+  try {
+    const response = await fetch("/api/supabase", {
+      method: "GET",
+    });
+    
+    const data = await response.json();
+    // Extract the allDocuments array from the response
+    return data.allDocuments || [];
+  } catch (error) {
+    console.error("Error fetching documents:", error);
+    return [];
+  }
 }
 
 /**
@@ -34,7 +43,7 @@ export async function parseExternalFile(fileKey: string) {
 
 /**
  * Saves a document to the database
- * @param document - The document to save
+ * @param document - The document data to save
  */
 export async function saveDocument(document: DocumentData) {
   const response = await fetch("/api/supabase", {
@@ -42,7 +51,9 @@ export async function saveDocument(document: DocumentData) {
     body: JSON.stringify(document),
   });
   
-  return await response.json();
+  const data = await response.json();
+  // Extract the document from the response
+  return document.id ? { ...document, id: document.id } : data.newDocument;
 }
 
 /**
