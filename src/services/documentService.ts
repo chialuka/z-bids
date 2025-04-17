@@ -4,6 +4,8 @@ interface DocumentData {
   id?: string;
   name: string;
   content: string;
+  description?: string;
+  dueDate?: string;
 }
 
 /**
@@ -11,7 +13,7 @@ interface DocumentData {
  */
 export async function fetchAllDocuments() {
   try {
-    const response = await fetch("/api/supabase", {
+    const response = await fetch("/api/supabase/documents", {
       method: "GET",
     });
     
@@ -37,8 +39,32 @@ export async function parseExternalFile(fileKey: string) {
   });
   
   const data = await response.json();
+  console.log({ data });
   // Sanitize the response to prevent XSS attacks
-  return DOMPurify.sanitize(data.data);
+  const sanitizedContent = DOMPurify.sanitize(data.data.coverSheet);
+  
+  // Ensure summary is properly formatted
+  let summary = data.data.summary;
+  
+  // If summary is a string, try to parse it as JSON
+  if (typeof summary === 'string') {
+    try {
+      // Remove any markdown code block formatting if present
+      const cleanedSummary = summary.replace(/```json\s*|\s*```/g, '').trim();
+      summary = JSON.parse(cleanedSummary);
+    } catch (error) {
+      console.error("Error parsing summary JSON:", error);
+      // If parsing fails, create a default summary object
+      summary = { summary: summary, dueDate: "" };
+    }
+  }
+  
+  // Ensure summary has the expected structure
+  if (!summary || typeof summary !== 'object') {
+    summary = { summary: "No summary available", dueDate: "" };
+  }
+  
+  return { sanitizedContent, summary };
 }
 
 /**
@@ -46,7 +72,7 @@ export async function parseExternalFile(fileKey: string) {
  * @param document - The document data to save
  */
 export async function saveDocument(document: DocumentData) {
-  const response = await fetch("/api/supabase", {
+  const response = await fetch("/api/supabase/documents", {
     method: document.id ? "PATCH" : "POST",
     body: JSON.stringify(document),
   });
@@ -75,3 +101,11 @@ export async function searchDocument(searchTerm: string, documentContent: string
   const data = await response.json();
   return DOMPurify.sanitize(data.data);
 } 
+
+export async function fetchAllFolders() {
+  const response = await fetch("/api/supabase/folders", {
+    method: "GET",
+  });
+  const data = await response.json();
+  return data.allFolders || [];
+}

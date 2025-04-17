@@ -7,7 +7,6 @@ import { File } from "@/types";
 export default async function Home() {
 	// const sharePointFiles = await getSharePointFiles();
   const allFiles = (await listAllFiles()) as unknown as File[];
-  console.log({ allFiles });
 
 	return (
 		<main className="m-2 sm:m-5 lg:m-10">
