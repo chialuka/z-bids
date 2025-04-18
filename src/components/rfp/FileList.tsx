@@ -18,7 +18,7 @@ interface FileListProps {
 	files: Document[];
 	folders: Folder[];
 	isLoading: boolean;
-	onFileSelect: (file: Document) => void;
+	onFileSelect: (file: Document, contentType: "coverSheet" | "pdfContent" | "complianceMatrix") => void;
 }
 
 export default function FileList({
@@ -104,7 +104,7 @@ export default function FileList({
 											<Button
 												size="sm"
 												fullWidth
-												onPress={() => onFileSelect(file)}
+												onPress={() => onFileSelect(file, "coverSheet")}
 												className="text-sm"
 											>
 												Generate Cover Sheet
@@ -114,6 +114,7 @@ export default function FileList({
 												fullWidth
 												variant="bordered"
 												className="text-sm"
+												onPress={() => onFileSelect(file, "complianceMatrix")}
 											>
 												Generate Compliance Matrix
 											</Button>
@@ -162,12 +163,12 @@ export default function FileList({
 												<TableCell>{file.name}</TableCell>
 												<TableCell>{file.description}</TableCell>
 												<TableCell>
-													<Button size="sm" onPress={() => onFileSelect(file)}>
+													<Button size="sm" onPress={() => onFileSelect(file, "coverSheet")}>
 														Generate Cover Sheet
 													</Button>
 												</TableCell>
 												<TableCell>
-													<Button size="sm" variant="bordered">
+													<Button size="sm" variant="bordered" onPress={() => onFileSelect(file, "complianceMatrix")}>
 														Generate Compliance Matrix
 													</Button>
 												</TableCell>

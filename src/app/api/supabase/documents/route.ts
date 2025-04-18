@@ -18,8 +18,10 @@ export async function POST(request: Request) {
     const requestBody = await request.json();
     const newDocument = await db.insert(documentsTable).values({
       name: requestBody.name,
-      content: requestBody.content,
+      coverSheet: requestBody.coverSheet,
+      pdfContent: requestBody.pdfContent,
       description: requestBody.description,
+      complianceMatrix: requestBody.complianceMatrix,
       dueDate: requestBody.dueDate ? new Date(requestBody.dueDate) : null,
     });
     return NextResponse.json({ newDocument }, { status: 200 });
@@ -33,7 +35,7 @@ export async function PATCH(request: Request) {
   try {
     const requestBody = await request.json();
     const updatedDocument = await db.update(documentsTable).set({
-      content: requestBody.content,
+      ...requestBody,
     }).where(eq(documentsTable.id, requestBody.id));
     return NextResponse.json({ updatedDocument }, { status: 200 });
   } catch (error) {

@@ -10,7 +10,6 @@ export const utApi = new UTApi({ token: process.env.UPLOADTHING_TOKEN });
 export const listAllFiles = async () => {
   try {
     const files = await utApi.listFiles();
-    console.log({ files });
     return files.files;
   } catch (error) {
     console.error(error);

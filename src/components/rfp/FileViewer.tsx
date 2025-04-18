@@ -7,6 +7,8 @@ import {
 	ModalFooter,
 	Button,
 } from "@heroui/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from 'remark-gfm';
 import DocumentEditor from "./DocumentEditor";
 import SearchBar from "./SearchBar";
 import TableEditor from "./TableEditor";
@@ -17,6 +19,7 @@ interface FileViewerProps {
 	fileName: string;
 	documentId: string;
 	documentContent: string;
+	documentType: "coverSheet" | "pdfContent" | "complianceMatrix";
 	onSaveDocument: (id: string, name: string, content: string) => Promise<void>;
 }
 
@@ -26,6 +29,7 @@ export default function FileViewer({
 	fileName,
 	documentId,
 	documentContent,
+	documentType,
 	onSaveDocument,
 }: FileViewerProps) {
 	const [content, setContent] = useState<string>("");
@@ -106,23 +110,39 @@ export default function FileViewer({
 					</div>
 				</ModalHeader>
 				<ModalBody className="flex gap-4">
-					<div>
-						{viewMode === "table" ? (
-							<>
-								<TableEditor
-									tableData={tableData}
-									onSave={handleSaveTableContent}
+					{documentType === "coverSheet" && (
+						<div>
+							{viewMode === "table" ? (
+								<>
+									<TableEditor
+										tableData={tableData}
+										onSave={handleSaveTableContent}
+									/>
+								</>
+							) : (
+								<DocumentEditor
+									documentId={documentId}
+									initialContent={documentContent}
+									documentName={fileName}
+									onSave={onSaveDocument}
 								/>
-							</>
-						) : (
-							<DocumentEditor
-								documentId={documentId}
-								initialContent={documentContent}
-								documentName={fileName}
-								onSave={onSaveDocument}
-							/>
-						)}
-					</div>
+							)}
+						</div>
+					)}
+					{/* {documentType === "complianceMatrix" && (
+						<div className="prose prose-sm max-w-none dark:prose-invert">
+							<ReactMarkdown>{documentContent}</ReactMarkdown>
+						</div>
+					)} */}
+					{documentType === "complianceMatrix" && (
+						<div className="w-full overflow-x-auto">
+							<div className="prose prose-sm max-w-none dark:prose-invert prose-table:border-collapse prose-td:border prose-td:border-gray-300 prose-td:p-2 prose-th:border prose-th:border-gray-300 prose-th:p-2 prose-th:bg-gray-100 dark:prose-th:bg-gray-800">
+								<ReactMarkdown remarkPlugins={[remarkGfm]}>
+									{documentContent}
+								</ReactMarkdown>
+							</div>
+						</div>
+					)}
 					<div className="">
 						<SearchBar documentContent={documentContent} />
 					</div>
@@ -135,7 +155,7 @@ export default function FileViewer({
 							onPress={handleDownloadCSV}
 							className="font-semibold"
 						>
-							Download CSV
+							Download Document
 						</Button>
 					</div>
 					<Button color="danger" variant="light" onPress={onClose}>

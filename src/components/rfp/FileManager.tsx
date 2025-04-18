@@ -15,7 +15,9 @@ import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
 
 
 export default function RFPFiles({ files }: { files: File[] }) {
-	const [content, setContent] = useState<string>("");
+	const [shownContent, setShownContent] = useState<string>("");
+	// const [pdfContent, setPdfContent] = useState<string>("");
+	// const [complianceMatrix, setComplianceMatrix] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 	const [openFileName, setOpenFileName] = useState<string>("");
@@ -23,7 +25,7 @@ export default function RFPFiles({ files }: { files: File[] }) {
 	const [showFolderContent, setShowFolderContent] = useState<boolean>(false);
   const [allDocuments, setAllDocuments] = useState<Document[]>([]);
   const [allFolders, setAllFolders] = useState<Folder[]>([]);
-  
+  const [documentType, setDocumentType] = useState<"coverSheet" | "pdfContent" | "complianceMatrix">("coverSheet");
   console.log({ files})
 	// Memoize the document loading function
 	const loadDocuments = useCallback(async (): Promise<Document[]> => {
@@ -44,9 +46,11 @@ export default function RFPFiles({ files }: { files: File[] }) {
 						// Save the document only once
 						await saveDocument({
 							name: file.name,
-							content: parsedContent.sanitizedContent,
+							coverSheet: parsedContent.sanitizedContent,
 							description: parsedContent.summary.summary,
 							dueDate: parsedContent.summary.dueDate,
+							pdfContent: parsedContent.pdfContent,
+              complianceMatrix: parsedContent.complianceMatrix,
 						});
 					})
 				);
@@ -71,13 +75,13 @@ export default function RFPFiles({ files }: { files: File[] }) {
 			try {
 				console.log("handleSaveDocument called for:", name);
 				// First update the UI optimistically
-				setContent(updatedContent);
+				setShownContent(updatedContent);
 
 				// Then save to the database
 				await saveDocument({
 					id,
 					name,
-					content: updatedContent,
+					coverSheet: updatedContent,
 					// description: fullSummary.summary,
 					// dueDate: fullSummary.dueDate,
 				});
@@ -92,7 +96,7 @@ export default function RFPFiles({ files }: { files: File[] }) {
 		[]
 	);
 
-	const handleFileSelect = useCallback(async (file: Document) => {
+	const handleFileSelect = useCallback(async (file: Document, contentType: "coverSheet" | "pdfContent" | "complianceMatrix") => {
 		console.log("handleFileSelect called for:", file.name);
 		setOpenFileName(file.name);
 		setIsLoading(true);
@@ -107,23 +111,30 @@ export default function RFPFiles({ files }: { files: File[] }) {
 				(doc: Document) => doc.name === file.name
 			);
 
-			if (documentExists && documentExists.content) {
+			if (documentExists) {
+        const content = {
+          coverSheet: documentExists.coverSheet,
+          pdfContent: documentExists.pdfContent,
+          complianceMatrix: documentExists.complianceMatrix,
+        }
 				console.log("Document exists, using existing content:", file.name);
-				setContent(documentExists.content);
+				setShownContent(content[contentType]);
 				setDocumentId(documentExists.id.toString());
-
+				setDocumentType(contentType);
 			} else {
 				console.log("Document doesn't exist, parsing and saving:", file.name);
 				const parsedContent = await parseExternalFile(file.name);
 
-				setContent(parsedContent.sanitizedContent);
+				setShownContent(parsedContent.sanitizedContent);
 
 				// Save the document only once
 				const newDocument = await saveDocument({
 					name: file.name,
-					content: parsedContent.sanitizedContent,
+					coverSheet: parsedContent.sanitizedContent,
 					description: parsedContent.summary.summary,
 					dueDate: parsedContent.summary.dueDate,
+					pdfContent: parsedContent.pdfContent,
+          complianceMatrix: parsedContent.complianceMatrix,
 				});
 
 				setDocumentId(newDocument.id.toString());
@@ -175,8 +186,9 @@ export default function RFPFiles({ files }: { files: File[] }) {
 				onClose={() => setIsModalOpen(false)}
 				fileName={openFileName}
 				documentId={documentId}
-				documentContent={content}
+				documentContent={shownContent}
 				onSaveDocument={handleSaveDocument}
+				documentType={documentType}
 			/>
 		</section>
 	);

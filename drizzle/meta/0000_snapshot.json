@@ -1,5 +1,5 @@
 {
-  "id": "63ef9db3-e30a-48b4-abfd-8c7a184346be",
+  "id": "aab836c6-fe98-4f67-abbf-04703b10eaa7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -31,11 +31,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "content": {
-          "name": "content",
+        "pdfContent": {
+          "name": "pdfContent",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "coverSheet": {
+          "name": "coverSheet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "complianceMatrix": {
+          "name": "complianceMatrix",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "description": {
           "name": "description",

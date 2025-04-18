@@ -3,7 +3,9 @@ import { integer, pgTable, varchar, text, timestamp } from "drizzle-orm/pg-core"
 export const documentsTable = pgTable("documents", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   name: varchar({ length: 255 }).notNull(),
-  content: text().notNull(),
+  pdfContent: text(),
+  coverSheet: text(),
+  complianceMatrix: text(),
   description: text(),
   dueDate: timestamp(),
   folderId: integer().references(() => foldersTable.id),
