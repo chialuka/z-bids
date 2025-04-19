@@ -53,7 +53,7 @@ export default function FileList({
 	// Mobile view
 	const renderMobileView = () =>
 		folders.map((folder, index) => (
-			<div className="space-y-4 sm:hidden" key={index}>
+			<div className="space-y-4 sm:hidden h-full overflow-y-auto" key={index}>
 				<div
 					onClick={() => openOrCloseFolder(index)}
 					className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-3 rounded-md transition-colors touch-manipulation"
@@ -67,7 +67,7 @@ export default function FileList({
 						{folder.name}
 					</p>
 				</div>
-				{openFolders.includes(index) && (
+				<div className={`transition-all duration-300 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
 					<div className="space-y-4 pl-4">
 						{files
 							.filter((file: Document) => file.folderId === folder.id)
@@ -123,14 +123,14 @@ export default function FileList({
 								</div>
 							))}
 					</div>
-				)}
+				</div>
 			</div>
 		));
 
 	// Desktop view
 	const renderDesktopView = () => (
-		<div className="hidden sm:block max-h-[80vh] overflow-y-auto border border-gray-200 rounded-lg p-4">
-			<div className="space-y-4">
+		<div className="hidden sm:block h-full overflow-y-auto">
+			<div className="space-y-4 p-4">
 				{folders.map((folder, index) => (
 					<div className="pl-2" key={index}>
 						<div
@@ -146,42 +146,44 @@ export default function FileList({
 								{folder.name}
 							</p>
 						</div>
-						{openFolders.includes(index) && (
-							<Table aria-label="Table of Files">
-								<TableHeader>
-									<TableColumn>Name</TableColumn>
-									<TableColumn>Summary</TableColumn>
-									<TableColumn>Cover Sheet</TableColumn>
-									<TableColumn>Compliance Matrix</TableColumn>
-									<TableColumn>Due Date</TableColumn>
-								</TableHeader>
-								<TableBody>
-									{files
-										.filter((file: Document) => file.folderId === folder.id)
-										.map((file: Document) => (
-											<TableRow key={file.id}>
-												<TableCell>{file.name}</TableCell>
-												<TableCell>{file.description}</TableCell>
-												<TableCell>
-													<Button size="sm" onPress={() => onFileSelect(file, "coverSheet")}>
-														Generate Cover Sheet
-													</Button>
-												</TableCell>
-												<TableCell>
-													<Button size="sm" variant="bordered" onPress={() => onFileSelect(file, "complianceMatrix")}>
-														Generate Compliance Matrix
-													</Button>
-												</TableCell>
-												<TableCell>
-													{file.dueDate
-														? new Date(file.dueDate).toLocaleDateString()
-														: "No due date"}
-												</TableCell>
-											</TableRow>
-										))}
-								</TableBody>
-							</Table>
-						)}
+						<div className={`transition-all duration-300 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+							<div className="mt-2">
+								<Table aria-label="Table of Files">
+									<TableHeader>
+										<TableColumn>Name</TableColumn>
+										<TableColumn>Summary</TableColumn>
+										<TableColumn>Cover Sheet</TableColumn>
+										<TableColumn>Compliance Matrix</TableColumn>
+										<TableColumn>Due Date</TableColumn>
+									</TableHeader>
+									<TableBody>
+										{files
+											.filter((file: Document) => file.folderId === folder.id)
+											.map((file: Document) => (
+												<TableRow key={file.id}>
+													<TableCell>{file.name}</TableCell>
+													<TableCell>{file.description}</TableCell>
+													<TableCell>
+														<Button size="sm" onPress={() => onFileSelect(file, "coverSheet")}>
+															Generate Cover Sheet
+														</Button>
+													</TableCell>
+													<TableCell>
+														<Button size="sm" variant="bordered" onPress={() => onFileSelect(file, "complianceMatrix")}>
+															Generate Compliance Matrix
+														</Button>
+													</TableCell>
+													<TableCell>
+														{file.dueDate
+															? new Date(file.dueDate).toLocaleDateString()
+															: "No due date"}
+													</TableCell>
+												</TableRow>
+											))}
+									</TableBody>
+								</Table>
+							</div>
+						</div>
 					</div>
 				))}
 			</div>

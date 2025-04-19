@@ -109,9 +109,9 @@ export default function FileViewer({
 						</div>
 					</div>
 				</ModalHeader>
-				<ModalBody className="flex gap-4">
+				<ModalBody className="flex gap-4 overflow-x-hidden pb-40">
 					{documentType === "coverSheet" && (
-						<div>
+						<div className="w-full overflow-x-auto">
 							{viewMode === "table" ? (
 								<>
 									<TableEditor
@@ -129,11 +129,6 @@ export default function FileViewer({
 							)}
 						</div>
 					)}
-					{/* {documentType === "complianceMatrix" && (
-						<div className="prose prose-sm max-w-none dark:prose-invert">
-							<ReactMarkdown>{documentContent}</ReactMarkdown>
-						</div>
-					)} */}
 					{documentType === "complianceMatrix" && (
 						<div className="w-full overflow-x-auto">
 							<div className="prose prose-sm max-w-none dark:prose-invert prose-table:border-collapse prose-td:border prose-td:border-gray-300 prose-td:p-2 prose-th:border prose-th:border-gray-300 prose-th:p-2 prose-th:bg-gray-100 dark:prose-th:bg-gray-800">
@@ -143,7 +138,7 @@ export default function FileViewer({
 							</div>
 						</div>
 					)}
-					<div className="">
+					<div className="fixed bottom-0 left-0 right-0 bg-white py-10 px-4 border-t">
 						<SearchBar documentContent={documentContent} />
 					</div>
 				</ModalBody>

@@ -13,7 +13,6 @@ import {
 import { OpenFolderIcon } from "../icons/OpenFolderIcon";
 import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
 
-
 export default function RFPFiles({ files }: { files: File[] }) {
 	const [shownContent, setShownContent] = useState<string>("");
 	// const [pdfContent, setPdfContent] = useState<string>("");
@@ -23,26 +22,34 @@ export default function RFPFiles({ files }: { files: File[] }) {
 	const [openFileName, setOpenFileName] = useState<string>("");
 	const [documentId, setDocumentId] = useState<string>("");
 	const [showFolderContent, setShowFolderContent] = useState<boolean>(false);
-  const [allDocuments, setAllDocuments] = useState<Document[]>([]);
-  const [allFolders, setAllFolders] = useState<Folder[]>([]);
-  const [documentType, setDocumentType] = useState<"coverSheet" | "pdfContent" | "complianceMatrix">("coverSheet");
-  console.log({ files})
+	const [allDocuments, setAllDocuments] = useState<Document[]>([]);
+	const [allFolders, setAllFolders] = useState<Folder[]>([]);
+	const [documentType, setDocumentType] = useState<
+		"coverSheet" | "pdfContent" | "complianceMatrix"
+	>("coverSheet");
+	console.log({ files });
 	// Memoize the document loading function
 	const loadDocuments = useCallback(async (): Promise<Document[]> => {
 		try {
-			const [documents, folders] = await Promise.all([fetchAllDocuments(), fetchAllFolders()]);
+			const [documents, folders] = await Promise.all([
+				fetchAllDocuments(),
+				fetchAllFolders(),
+			]);
 			setAllFolders(folders);
 			const filesNotInDatabase = files.filter(
 				(file) =>
 					!documents.some((doc: { name: string }) => doc.name === file.name)
 			);
-			console.log("Files not in database:", filesNotInDatabase.map(f => f.name));
+			console.log(
+				"Files not in database:",
+				filesNotInDatabase.map((f) => f.name)
+			);
 			if (filesNotInDatabase.length) {
 				await Promise.all(
 					filesNotInDatabase.map(async (file) => {
 						console.log("Saving file from loadDocuments:", file.name);
 						const parsedContent = await parseExternalFile(file.key);
-            console.log({ parsedContent })
+						console.log({ parsedContent });
 						// Save the document only once
 						await saveDocument({
 							name: file.name,
@@ -50,7 +57,7 @@ export default function RFPFiles({ files }: { files: File[] }) {
 							description: parsedContent.summary.summary,
 							dueDate: parsedContent.summary.dueDate,
 							pdfContent: parsedContent.pdfContent,
-              complianceMatrix: parsedContent.complianceMatrix,
+							complianceMatrix: parsedContent.complianceMatrix,
 						});
 					})
 				);
@@ -64,9 +71,9 @@ export default function RFPFiles({ files }: { files: File[] }) {
 
 	// Load documents on initial mount only
 	useEffect(() => {
-			loadDocuments().then((documents) => {
-				setAllDocuments(documents);
-			});
+		loadDocuments().then((documents) => {
+			setAllDocuments(documents);
+		});
 	}, [loadDocuments]);
 
 	// Handle document saving with immediate updates
@@ -96,60 +103,69 @@ export default function RFPFiles({ files }: { files: File[] }) {
 		[]
 	);
 
-	const handleFileSelect = useCallback(async (file: Document, contentType: "coverSheet" | "pdfContent" | "complianceMatrix") => {
-		console.log("handleFileSelect called for:", file.name);
-		setOpenFileName(file.name);
-		setIsLoading(true);
+	const handleFileSelect = useCallback(
+		async (
+			file: Document,
+			contentType: "coverSheet" | "pdfContent" | "complianceMatrix"
+		) => {
+			console.log("handleFileSelect called for:", file.name);
+			setOpenFileName(file.name);
+			setIsLoading(true);
 
-		try {
-			// First ensure we have the latest documents
-			const documents = await fetchAllDocuments();
-			console.log("Documents fetched in handleFileSelect:", documents.map((d: Document) => d.name));
+			try {
+				// First ensure we have the latest documents
+				const documents = await fetchAllDocuments();
+				console.log(
+					"Documents fetched in handleFileSelect:",
+					documents.map((d: Document) => d.name)
+				);
 
-			// Check if the document already exists in our database
-			const documentExists = documents.find(
-				(doc: Document) => doc.name === file.name
-			);
+				// Check if the document already exists in our database
+				const documentExists = documents.find(
+					(doc: Document) => doc.name === file.name
+				);
 
-			if (documentExists) {
-        const content = {
-          coverSheet: documentExists.coverSheet,
-          pdfContent: documentExists.pdfContent,
-          complianceMatrix: documentExists.complianceMatrix,
-        }
-				console.log("Document exists, using existing content:", file.name);
-				setShownContent(content[contentType]);
-				setDocumentId(documentExists.id.toString());
-				setDocumentType(contentType);
-			} else {
-				console.log("Document doesn't exist, parsing and saving:", file.name);
-				const parsedContent = await parseExternalFile(file.name);
+				if (documentExists) {
+					const content = {
+						coverSheet: documentExists.coverSheet,
+						pdfContent: documentExists.pdfContent,
+						complianceMatrix: documentExists.complianceMatrix,
+					};
+					console.log("Document exists, using existing content:", file.name);
+					setShownContent(content[contentType]);
+					setDocumentId(documentExists.id.toString());
+					setDocumentType(contentType);
+				} else {
+					console.log("Document doesn't exist, parsing and saving:", file.name);
+					const parsedContent = await parseExternalFile(file.name);
 
-				setShownContent(parsedContent.sanitizedContent);
+					setShownContent(parsedContent.sanitizedContent);
 
-				// Save the document only once
-				const newDocument = await saveDocument({
-					name: file.name,
-					coverSheet: parsedContent.sanitizedContent,
-					description: parsedContent.summary.summary,
-					dueDate: parsedContent.summary.dueDate,
-					pdfContent: parsedContent.pdfContent,
-          complianceMatrix: parsedContent.complianceMatrix,
-				});
+					// Save the document only once
+					const newDocument = await saveDocument({
+						name: file.name,
+						coverSheet: parsedContent.sanitizedContent,
+						description: parsedContent.summary.summary,
+						dueDate: parsedContent.summary.dueDate,
+						pdfContent: parsedContent.pdfContent,
+						complianceMatrix: parsedContent.complianceMatrix,
+					});
 
-				setDocumentId(newDocument.id.toString());
+					setDocumentId(newDocument.id.toString());
+				}
+			} catch (error) {
+				console.error("Error processing file:", error);
+			} finally {
+				setIsLoading(false);
+				setIsModalOpen(true);
 			}
-		} catch (error) {
-			console.error("Error processing file:", error);
-		} finally {
-			setIsLoading(false);
-			setIsModalOpen(true);
-		}
-	}, []);
+		},
+		[]
+	);
 
 	return (
 		<section>
-			<section className="border rounded-lg p-1 sm:p-4 bg-white shadow-sm overflow-y-auto">
+			<section className="border rounded-lg p-1 sm:p-4 bg-white shadow-sm">
 				<div
 					onClick={() => setShowFolderContent(!showFolderContent)}
 					className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-3 sm:p-2 rounded-md transition-colors touch-manipulation"
@@ -164,18 +180,14 @@ export default function RFPFiles({ files }: { files: File[] }) {
 					</p>
 				</div>
 				<div
-					className={`overflow-hidden transition-all duration-300 ease-in-out ${
-						showFolderContent
-							? "max-h-[80vh] sm:max-h-[500px] opacity-100"
-							: "max-h-0 opacity-0"
-					}`}
+					className={`${showFolderContent ? "opacity-100" : "h-0 opacity-0"}`}
 				>
-					<div className="mt-2 sm:mt-4 border-t pt-2 sm:pt-4 overflow-y-scroll">
+					<div className="h-full">
 						<FileList
 							files={allDocuments}
 							isLoading={isLoading}
 							onFileSelect={handleFileSelect}
-              folders={allFolders}
+							folders={allFolders}
 						/>
 					</div>
 				</div>
