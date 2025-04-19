@@ -53,21 +53,21 @@ export default function FileList({
 	// Mobile view
 	const renderMobileView = () =>
 		folders.map((folder, index) => (
-			<div className="space-y-4 sm:hidden h-full overflow-y-auto" key={index}>
+			<div className="space-y-4 md:hidden h-full overflow-y-auto" key={index}>
 				<div
 					onClick={() => openOrCloseFolder(index)}
 					className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-3 rounded-md transition-colors touch-manipulation"
 				>
 					{openFolders.includes(index) ? (
-						<OpenFolderIcon className="text-blue-500 transition-transform duration-1000 w-6 h-6" />
+						<OpenFolderIcon className="text-blue-500 transition-transform duration-5000 w-6 h-6" />
 					) : (
-						<ClosedFolderIcon className="text-blue-500 transition-transform duration-1000 w-6 h-6" />
+						<ClosedFolderIcon className="text-blue-500 transition-transform duration-5000 w-6 h-6" />
 					)}
 					<p className="font-medium text-gray-700 text-base">
 						{folder.name}
 					</p>
 				</div>
-				<div className={`transition-all duration-300 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+				<div className={`transition-all duration-500 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
 					<div className="space-y-4 pl-4">
 						{files
 							.filter((file: Document) => file.folderId === folder.id)
@@ -129,7 +129,7 @@ export default function FileList({
 
 	// Desktop view
 	const renderDesktopView = () => (
-		<div className="hidden sm:block h-full overflow-y-auto">
+		<div className="hidden md:block h-full overflow-y-auto">
 			<div className="space-y-4 p-4">
 				{folders.map((folder, index) => (
 					<div className="pl-2" key={index}>
@@ -138,42 +138,59 @@ export default function FileList({
 							className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-3 sm:p-2 rounded-md transition-colors touch-manipulation"
 						>
 							{openFolders.includes(index) ? (
-								<OpenFolderIcon className="text-blue-500 transition-transform duration-1000 w-6 h-6 sm:w-5 sm:h-5" />
+								<OpenFolderIcon className="text-blue-500 transition-transform duration-500 w-6 h-6 sm:w-5 sm:h-5" />
 							) : (
-								<ClosedFolderIcon className="text-blue-500 transition-transform duration-1000 w-6 h-6 sm:w-5 sm:h-5" />
+								<ClosedFolderIcon className="text-blue-500 transition-transform duration-500 w-6 h-6 sm:w-5 sm:h-5" />
 							)}
 							<p className="font-medium text-gray-700 text-base sm:text-sm">
 								{folder.name}
 							</p>
 						</div>
-						<div className={`transition-all duration-300 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+						<div className={`transition-all duration-500 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
 							<div className="mt-2">
 								<Table aria-label="Table of Files">
 									<TableHeader>
-										<TableColumn>Name</TableColumn>
-										<TableColumn>Summary</TableColumn>
-										<TableColumn>Cover Sheet</TableColumn>
-										<TableColumn>Compliance Matrix</TableColumn>
-										<TableColumn>Due Date</TableColumn>
+										<TableColumn className="w-1/4">Name</TableColumn>
+										<TableColumn className="w-1/3">Summary</TableColumn>
+										<TableColumn className="w-1/6">Cover Sheet</TableColumn>
+										<TableColumn className="w-1/6">Compliance Matrix</TableColumn>
+										<TableColumn className="w-1/12">Due Date</TableColumn>
 									</TableHeader>
 									<TableBody>
 										{files
 											.filter((file: Document) => file.folderId === folder.id)
 											.map((file: Document) => (
 												<TableRow key={file.id}>
-													<TableCell>{file.name}</TableCell>
-													<TableCell>{file.description}</TableCell>
-													<TableCell>
-														<Button size="sm" onPress={() => onFileSelect(file, "coverSheet")}>
-															Generate Cover Sheet
+													<TableCell className="w-1/4">
+														<div className="truncate max-w-[200px] xl:max-w-none xl:whitespace-normal">
+															{file.name}
+														</div>
+													</TableCell>
+													<TableCell className="w-1/3">
+														<div className="line-clamp-3 max-w-[300px] xl:max-w-none xl:line-clamp-3 2xl:line-clamp-none">
+															{file.description}
+														</div>
+													</TableCell>
+													<TableCell className="w-1/6">
+														<Button 
+															size="sm" 
+															onPress={() => onFileSelect(file, "coverSheet")}
+															className="text-xs px-2 py-1 xl:text-sm xl:px-3 xl:py-2"
+														>
+															Cover Sheet
 														</Button>
 													</TableCell>
-													<TableCell>
-														<Button size="sm" variant="bordered" onPress={() => onFileSelect(file, "complianceMatrix")}>
-															Generate Compliance Matrix
+													<TableCell className="w-1/6">
+														<Button 
+															size="sm" 
+															variant="bordered" 
+															onPress={() => onFileSelect(file, "complianceMatrix")}
+															className="text-xs px-2 py-1 xl:text-sm xl:px-3 xl:py-2"
+														>
+															Compliance Matrix
 														</Button>
 													</TableCell>
-													<TableCell>
+													<TableCell className="w-1/12">
 														{file.dueDate
 															? new Date(file.dueDate).toLocaleDateString()
 															: "No due date"}
