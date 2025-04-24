@@ -41,8 +41,77 @@ export default function FileViewer({
 			try {
 				if (typeof documentContent === "string") {
 					setContent(documentContent);
-					// Parse CSV content for table view
-					const rows = documentContent.split("\n").map((row) => row.split(","));
+					// Parse CSV content for table view with exactly three columns
+					const parseCSVToThreeColumns = (csvString: string) => {
+						// Split by newlines first
+						const lines = csvString.split('\n');
+						const processedRows = [];
+						
+						for (const line of lines) {
+							// Skip empty lines
+							if (!line.trim()) continue;
+							
+							// Regex to match CSV format with consideration for quotes
+							// This matches: field,field,"field with, commas"
+							const parts = [];
+							let inQuotes = false;
+							let currentPart = '';
+							let columnCount = 0;
+							
+							// Process character by character
+							for (let i = 0; i < line.length; i++) {
+								const char = line[i];
+								
+								if (char === '"') {
+									// Toggle quote state
+									inQuotes = !inQuotes;
+									// Add the quote to the current part
+									currentPart += char;
+								} else if (char === ',' && !inQuotes) {
+									// End of field - but only process first two columns
+									parts.push(currentPart);
+									currentPart = '';
+									columnCount++;
+									
+									// If we already have two columns, the rest goes into the third
+									if (columnCount >= 2) {
+										// Get the rest of the line
+										currentPart = line.substring(i + 1);
+										break;
+									}
+								} else {
+									// Regular character
+									currentPart += char;
+								}
+							}
+							
+							// Add the last part
+							if (currentPart) {
+								parts.push(currentPart);
+							}
+							
+							// Ensure we have exactly 3 columns
+							while (parts.length < 3) {
+								parts.push('');
+							}
+							
+							// Truncate to 3 columns if somehow we have more
+							if (parts.length > 3) {
+								parts.length = 3;
+							}
+							
+							processedRows.push(parts);
+						}
+						
+						// Ensure we have at least one row with headers
+						if (processedRows.length === 0) {
+							processedRows.push(['Section', 'Subsection', 'Content']);
+						}
+						
+						return processedRows;
+					};
+					
+					const rows = parseCSVToThreeColumns(documentContent);
 					setTableData(rows);
 					// Automatically switch to table view if it looks like CSV
 					if (rows.length > 1 && rows[0].length > 1) {

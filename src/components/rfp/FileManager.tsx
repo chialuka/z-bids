@@ -115,10 +115,6 @@ export default function RFPFiles({ files }: { files: File[] }) {
 			try {
 				// First ensure we have the latest documents
 				const documents = await fetchAllDocuments();
-				console.log(
-					"Documents fetched in handleFileSelect:",
-					documents.map((d: Document) => d.name)
-				);
 
 				// Check if the document already exists in our database
 				const documentExists = documents.find(

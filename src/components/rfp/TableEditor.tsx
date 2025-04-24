@@ -51,9 +51,40 @@ export default function TableEditor({ tableData, onSave }: TableEditorProps) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Convert table data back to CSV string without adding quotation marks
-      const csvContent = editableData
-        .map(row => row.join(','))
+      // Ensure each row has exactly 3 columns
+      const normalizedData = editableData.map(row => {
+        const newRow = [...row];
+        // Add empty columns if less than 3
+        while (newRow.length < 3) {
+          newRow.push('');
+        }
+        // Truncate if more than 3
+        if (newRow.length > 3) {
+          return newRow.slice(0, 3);
+        }
+        return newRow;
+      });
+
+      // Convert table data back to CSV string
+      const csvContent = normalizedData
+        .map(row => {
+          // Quote only the third column (content) if it contains commas
+          const col1 = row[0];
+          const col2 = row[1];
+          let col3 = row[2];
+          
+          // Escape quotes in content by doubling them
+          if (col3.includes('"')) {
+            col3 = col3.replace(/"/g, '""');
+          }
+          
+          // Only quote the third column if it contains commas
+          if (col3.includes(',')) {
+            return `${col1},${col2},"${col3}"`;
+          } else {
+            return `${col1},${col2},${col3}`;
+          }
+        })
         .join('\n');
       
       await onSave(csvContent);
