@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 					document: content,
 				}),
 				generateSummary({ document: content }),
-				fetch("https://z-bid-server-c98ace28198b.herokuapp.com//analyze", {
+				fetch("https://z-bid-server-c98ace28198b.herokuapp.com/analyze", {
 					method: "POST",
 					body: JSON.stringify({ pdf_file_content: content }),
 					headers: {
