@@ -1,7 +1,7 @@
 import { Input, Spinner } from "@heroui/react";
 // import { MagnifyingGlassIcon as SearchIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
-import { searchDocument } from "@/services/documentService";
+import { searchDocument } from "@/services/document";
 import { getGreeting } from "@/utils/greetings";
 
 interface SearchBarProps {

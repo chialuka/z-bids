@@ -1,4 +1,3 @@
-
 export type File = {
   name: string;
   webUrl: string;
@@ -51,3 +50,45 @@ export interface WorkflowResult {
   results: Record<string, string>;
   finalTable: string | null;
 }
+
+export type SharePointFile = {
+  "@microsoft.graph.downloadUrl": string;
+  cTag: string;
+  createdBy: {
+    user: {
+      email: string;
+      id: string;
+      displayName: string;
+    };
+  };
+  createdDateTime: string;
+  eTag: string;
+  file: {
+    hashes: {
+      quickXorHash: string;
+    };
+    mimeType: string;
+  };
+  fileSystemInfo: {
+    createdDateTime: string;
+    lastModifiedDateTime: string;
+  };
+  id: string;
+  lastModifiedBy: {
+    user: {
+      displayName: string;
+      email: string;
+      id: string;
+    };
+  };
+  lastModifiedDateTime: string;
+  name: string;
+  parentReference: {
+    driveId: string;
+    driveType: string;
+    id: string;
+    name: string;
+    path: string;
+    siteId: string;
+  };
+};

@@ -8,8 +8,8 @@ import {
 	Spinner,
 	Button,
 } from "@heroui/react";
-import { Document, Folder } from "@/types";
-import { useState } from "react";
+import { Document, Folder, File as UploadThingFile } from "@/types";
+import { useEffect, useState } from "react";
 import { ChevronDownIcon } from "../icons/ChevronDownIcon";
 import { OpenFolderIcon } from "../icons/OpenFolderIcon";
 import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
@@ -18,7 +18,10 @@ interface FileListProps {
 	files: Document[];
 	folders: Folder[];
 	isLoading: boolean;
-	onFileSelect: (file: Document, contentType: "coverSheet" | "pdfContent" | "complianceMatrix") => void;
+	onFileSelect: (
+		file: Document,
+		contentType: "coverSheet" | "pdfContent" | "complianceMatrix"
+	) => void;
 }
 
 export default function FileList({
@@ -29,6 +32,18 @@ export default function FileList({
 }: FileListProps) {
 	const [activeFile, setActiveFile] = useState<string | null>(null);
 	const [openFolders, setOpenFolders] = useState<number[]>([]);
+	const [uploadThingFiles, setUploadThingFiles] = useState<UploadThingFile[]>(
+		[]
+	);
+	console.log({ uploadThingFiles });
+	useEffect(() => {
+		const fetchUploadThingFiles = async () => {
+			const response = await fetch("/api/uploadThing");
+			const data = await response.json();
+			setUploadThingFiles(data.files);
+		};
+		fetchUploadThingFiles();
+	}, []);
 
 	const openOrCloseFolder = (index: number) => {
 		if (openFolders.includes(index)) {
@@ -50,6 +65,13 @@ export default function FileList({
 		return <p className="text-gray-500 text-center p-4">No files found.</p>;
 	}
 
+	const openFilePdf = ({ name }: { name: string }) => {
+		const file = uploadThingFiles.find((file) => file.name === name);
+		if (file) {
+			window.open(`https://pa6rt2x38u.ufs.sh/f/${file.key}`, "_blank");
+		}
+	};
+
 	// Mobile view
 	const renderMobileView = () =>
 		folders.map((folder, index) => (
@@ -63,36 +85,53 @@ export default function FileList({
 					) : (
 						<ClosedFolderIcon className="text-blue-500 transition-transform duration-5000 w-6 h-6" />
 					)}
-					<p className="font-medium text-gray-700 text-base">
-						{folder.name}
-					</p>
+					<p className="font-medium text-gray-700 text-base">{folder.name}</p>
 				</div>
-				<div className={`transition-all duration-500 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+				<div
+					className={`transition-all duration-500 ease-in-out ${
+						openFolders.includes(index)
+							? "max-h-[2000px] opacity-100"
+							: "max-h-0 opacity-0 overflow-hidden"
+					}`}
+				>
 					<div className="space-y-4 pl-4">
 						{files
 							.filter((file: Document) => file.folderId === folder.id)
 							.map((file: Document) => (
-								<div 
-									key={file.id} 
+								<div
+									key={file.id}
 									className="border rounded-lg p-3 space-y-3 bg-white shadow-sm"
 								>
 									<div className="flex justify-between items-start">
-										<h3 className="font-medium text-sm text-gray-900 line-clamp-2 max-w-[200px]">{file.name}</h3>
+										<h3
+											onClick={() => openFilePdf({ name: file.name })}
+											className="font-medium text-sm text-gray-900 line-clamp-2 max-w-[200px] cursor-pointer"
+										>
+											{file.name}
+										</h3>
 										<Button
 											isIconOnly
 											variant="light"
-											onPress={() => setActiveFile(activeFile === file.id.toString() ? null : file.id.toString())}
+											onPress={() =>
+												setActiveFile(
+													activeFile === file.id.toString()
+														? null
+														: file.id.toString()
+												)
+											}
 											className="p-1"
 										>
-											<ChevronDownIcon 
-												className="w-5 h-5" 
+											<ChevronDownIcon
+												className="w-5 h-5"
 												isOpen={activeFile === file.id.toString()}
 											/>
 										</Button>
 									</div>
-									
-									<p className="text-xs text-gray-500 line-clamp-3 max-w-[200px]">{file.description}</p>
-									
+
+									<p className="text-xs text-gray-500 line-clamp-3 max-w-[200px]">
+										{file.description}
+									</p>
+
 									<p className="text-xs text-gray-500">
 										{file.dueDate
 											? new Date(file.dueDate).toLocaleDateString()
@@ -146,14 +185,22 @@ export default function FileList({
 								{folder.name}
 							</p>
 						</div>
-						<div className={`transition-all duration-500 ease-in-out ${openFolders.includes(index) ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+						<div
+							className={`transition-all duration-500 ease-in-out ${
+								openFolders.includes(index)
+									? "max-h-[2000px] opacity-100"
+									: "max-h-0 opacity-0 overflow-hidden"
+							}`}
+						>
 							<div className="mt-2">
 								<Table aria-label="Table of Files">
 									<TableHeader>
 										<TableColumn className="w-1/4">Name</TableColumn>
 										<TableColumn className="w-1/3">Summary</TableColumn>
 										<TableColumn className="w-1/6">Cover Sheet</TableColumn>
-										<TableColumn className="w-1/6">Compliance Matrix</TableColumn>
+										<TableColumn className="w-1/6">
+											Compliance Matrix
+										</TableColumn>
 										<TableColumn className="w-1/12">Due Date</TableColumn>
 									</TableHeader>
 									<TableBody>
@@ -162,7 +209,10 @@ export default function FileList({
 											.map((file: Document) => (
 												<TableRow key={file.id}>
 													<TableCell className="w-1/4">
-														<div className="truncate max-w-[200px] xl:max-w-none xl:whitespace-normal">
+														<div
+															onClick={() => openFilePdf({ name: file.name })}
+															className="truncate max-w-[200px] xl:max-w-none xl:whitespace-normal cursor-pointer"
+														>
 															{file.name}
 														</div>
 													</TableCell>
@@ -172,8 +222,8 @@ export default function FileList({
 														</div>
 													</TableCell>
 													<TableCell className="w-1/6">
-														<Button 
-															size="sm" 
+														<Button
+															size="sm"
 															onPress={() => onFileSelect(file, "coverSheet")}
 															className="text-xs px-2 py-1 xl:text-sm xl:px-3 xl:py-2"
 														>
@@ -181,10 +231,12 @@ export default function FileList({
 														</Button>
 													</TableCell>
 													<TableCell className="w-1/6">
-														<Button 
-															size="sm" 
-															variant="bordered" 
-															onPress={() => onFileSelect(file, "complianceMatrix")}
+														<Button
+															size="sm"
+															variant="bordered"
+															onPress={() =>
+																onFileSelect(file, "complianceMatrix")
+															}
 															className="text-xs px-2 py-1 xl:text-sm xl:px-3 xl:py-2"
 														>
 															Compliance Matrix

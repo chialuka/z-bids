@@ -6,9 +6,10 @@ import "@pnp/sp/folders";
 import { ClientSecretCredential } from "@azure/identity";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
-import { listAllFiles } from "./uploadThing";
+import { SharePointFile } from "@/types";
+// import { listAllFiles } from "./uploadThing";
 
-export const getSharePointFiles = async () => {
+export const getSharePointFiles = async (): Promise<SharePointFile[]> => {
 	try {
 		if (
 			!process.env.TENANT_ID ||
@@ -82,11 +83,25 @@ export const getSharePointFiles = async () => {
 			.api(`/sites/${siteResponse.id}/drives/${driveId}/root/children`)
 			.get();
 
-		const allFiles = await listAllFiles();
-    console.log({ allFiles });
-		console.log("Files:", filesResponse.value);
+		// const allFiles = await listAllFiles();
+    // console.log({ allFiles });
+		// console.log("Files:", filesResponse.value);
 		return filesResponse.value;
 	} catch (error) {
 		console.error("Error fetching lists:", error);
+		return [];
+	}
+};
+
+export const downloadSharePointFile = async (file: SharePointFile): Promise<Blob> => {
+	try {
+		const response = await fetch(file["@microsoft.graph.downloadUrl"]);
+		if (!response.ok) {
+			throw new Error(`Failed to download file: ${response.statusText}`);
+		}
+		return await response.blob();
+	} catch (error) {
+		console.error("Error downloading SharePoint file:", error);
+		throw error;
 	}
 };

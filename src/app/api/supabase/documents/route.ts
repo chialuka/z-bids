@@ -14,6 +14,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  console.log("POST request received");
   try {
     const requestBody = await request.json();
     const newDocument = await db.insert(documentsTable).values({
