@@ -69,8 +69,6 @@ export const getSharePointFiles = async (): Promise<SharePointFile[]> => {
 			.api(`/sites/netorgft17745017.sharepoint.com:/sites/RFP`)
 			.get();
 
-		console.log("Site ID:", siteResponse.id);
-
 		// Get drive (document library)
 		const drivesResponse = await graphClient
 			.api(`/sites/${siteResponse.id}/drives`)

@@ -140,15 +140,19 @@ export async function fetchAllFolders() {
 	}
 }
 
-export async function processNewFiles() {
+export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 	try {
-    const existingDocuments = await fetchAllDocuments();
-		const files = (await listAllUploadThingFiles()) as UploadThingFile[];
-		const filesNotInDatabase = files.filter(
-			(file) => !existingDocuments?.some((doc) => doc.name === file.name)
-		);
-		if (filesNotInDatabase.length) {
-			for (const file of filesNotInDatabase) {
+    // If no files specified, find new files from uploadthing that aren't in the database
+    if (!filesToProcess) {
+      const existingDocuments = await fetchAllDocuments();
+      const files = (await listAllUploadThingFiles()) as UploadThingFile[];
+      filesToProcess = files.filter(
+        (file) => !existingDocuments?.some((doc) => doc.name === file.name)
+      );
+    }
+    
+		if (filesToProcess.length) {
+			for (const file of filesToProcess) {
 				try {
 					console.log("Processing file:", file.name);
 					const parsedContent = await parseExternalFile(file.key);
@@ -158,7 +162,7 @@ export async function processNewFiles() {
 					});
 					console.log("rfp analysis done");
 					const result = await fetch(
-						"http://localhost:2500/analyze",
+						`${process.env.API_URL}/analyze`,
 						{
 							method: "POST",
 							body: JSON.stringify({ pdf_file_content: parsedContent }),

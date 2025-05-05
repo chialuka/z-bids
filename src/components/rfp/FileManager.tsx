@@ -38,10 +38,16 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 		isProcessing: boolean;
 		isComplete: boolean;
 		error: string | null;
+		message: string;
+		processedCount: number;
+		remainingCount: number;
 	}>({
 		isProcessing: false,
 		isComplete: false,
-		error: null
+		error: null,
+		message: "",
+		processedCount: 0,
+		remainingCount: 0
 	});
 
 	// Auto-hide success message after 3 seconds
@@ -59,40 +65,80 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 
 	// Process files when component mounts if shouldProcessFiles is true
 	useEffect(() => {
-		if (shouldProcessFiles) {
-			const processFiles = async () => {
-				try {
-					setProcessingStatus((prev) => ({ ...prev, isProcessing: true }));
-					const response = await fetch('/api/process-files');
-					
-					if (!response.ok) {
-						throw new Error('Failed to process files');
+		if (!shouldProcessFiles) return;
+		
+		let isMounted = true;
+		
+		const processFiles = async () => {
+			try {
+				if (!isMounted) return;
+				
+				setProcessingStatus((prev) => ({ 
+					...prev, 
+					isProcessing: true,
+					message: prev.processedCount > 0 
+						? `Processed ${prev.processedCount} files. Processing next file...` 
+						: "Processing files..."
+				}));
+				
+				const response = await fetch('/api/process-files');
+				
+				if (!response.ok) {
+					throw new Error('Failed to process files');
+				}
+				
+				const data = await response.json();
+				
+				if (!data.success) {
+					throw new Error(data.error || 'Failed to process files');
+				}
+
+				// If no more files to process, mark as complete
+				if (!data.processedFile || data.remainingFiles === 0) {
+					if (isMounted) {
+						setProcessingStatus((prev) => ({
+							...prev,
+							isProcessing: false,
+							isComplete: true,
+							message: data.processedFile 
+								? `Processed file ${data.processedFile}. All files processed.` 
+								: "No files needed processing.",
+							processedCount: prev.processedCount + (data.processedFile ? 1 : 0),
+							remainingCount: 0
+						}));
 					}
-					
-					const data = await response.json();
-					
-					if (!data.success) {
-						throw new Error(data.error || 'Failed to process files');
+				} else {
+					// Update status with processed file info
+					if (isMounted) {
+						setProcessingStatus((prev) => ({
+							...prev,
+							message: `Processed file ${data.processedFile}. ${data.remainingFiles} files remaining.`,
+							processedCount: prev.processedCount + 1,
+							remainingCount: data.remainingFiles
+						}));
+						
+						// Continue processing if more files exist
+						processFiles();
 					}
-					
-					setProcessingStatus((prev) => ({ ...prev, isComplete: true }));
-					
-					// Refresh documents after processing
-					// Commenting out to avoid typing issues - can be reimplemented if needed
-					// const updatedDocuments = await fetchAllDocuments();
-				} catch (err) {
-					console.error('Error processing files:', err);
+				}
+			} catch (err) {
+				console.error('Error processing files:', err);
+				if (isMounted) {
 					setProcessingStatus((prev) => ({
 						...prev,
+						isProcessing: false,
 						error: err instanceof Error ? err.message : 'Failed to process files'
 					}));
-				} finally {
-					setProcessingStatus((prev) => ({ ...prev, isProcessing: false }));
 				}
-			};
+			}
+		};
 
-			processFiles();
-		}
+		// Start processing files sequentially
+		processFiles();
+		
+		return () => {
+			isMounted = false;
+		};
 	}, [shouldProcessFiles]);
 
 	// Handle document saving with immediate updates
@@ -174,7 +220,12 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 		<section>
 			{processingStatus.isProcessing && (
 				<div className="mb-4 p-3 bg-blue-50 rounded-md text-blue-700">
-					Processing new files, please wait...
+					{processingStatus.message || "Processing files..."}
+					{processingStatus.processedCount > 0 && (
+						<div className="text-xs mt-1">
+							Processed: {processingStatus.processedCount}, Remaining: {processingStatus.remainingCount}
+						</div>
+					)}
 				</div>
 			)}
 			
@@ -186,7 +237,7 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 			
 			{processingStatus.isComplete && !processingStatus.error && (
 				<div className="mb-4 p-3 bg-green-50 rounded-md text-green-700 animate-fade-out">
-					Files processed successfully
+					{processingStatus.message || "Files processed successfully"}
 				</div>
 			)}
 			
