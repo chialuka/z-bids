@@ -20,7 +20,7 @@ interface FileListProps {
 	isLoading: boolean;
 	onFileSelect: (
 		file: Document,
-		contentType: "coverSheet" | "pdfContent" | "complianceMatrix"
+		contentType: "coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
 	) => void;
 }
 
@@ -157,6 +157,16 @@ export default function FileList({
 											>
 												Generate Compliance Matrix
 											</Button>
+											<Button
+												size="sm"
+												fullWidth
+												variant="flat"
+												color="secondary"
+												className="text-sm"
+												onPress={() => onFileSelect(file, "feasibilityCheck")}
+											>
+												Feasibility Check
+											</Button>
 										</div>
 									)}
 								</div>
@@ -201,6 +211,9 @@ export default function FileList({
 										<TableColumn className="w-1/6">
 											Compliance Matrix
 										</TableColumn>
+										<TableColumn className="w-1/6">
+											Feasibility
+										</TableColumn>
 										<TableColumn className="w-1/12">Due Date</TableColumn>
 									</TableHeader>
 									<TableBody>
@@ -240,6 +253,19 @@ export default function FileList({
 															className="text-xs px-2 py-1 xl:text-sm xl:px-3 xl:py-2"
 														>
 															Compliance Matrix
+														</Button>
+													</TableCell>
+													<TableCell className="w-1/6">
+														<Button
+															size="sm"
+															variant="flat"
+															color="secondary"
+															onPress={() =>
+																onFileSelect(file, "feasibilityCheck")
+															}
+															className="text-xs px-2 py-1 xl:text-sm xl:px-3 xl:py-2"
+														>
+															Feasibility Check
 														</Button>
 													</TableCell>
 													<TableCell className="w-1/12">

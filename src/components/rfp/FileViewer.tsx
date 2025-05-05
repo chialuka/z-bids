@@ -13,13 +13,28 @@ import DocumentEditor from "./DocumentEditor";
 import SearchBar from "./SearchBar";
 import TableEditor from "./TableEditor";
 
+// Define types for feasibility check data
+interface FeasibilityItem {
+	req_no: number;
+	section: string;
+	requirement: string;
+	feasible: "Yes" | "No" | "Uncertain";
+	reason: string;
+	citations: string;
+}
+
+interface FeasibilityData {
+	status: string;
+	result: FeasibilityItem[];
+}
+
 interface FileViewerProps {
 	isOpen: boolean;
 	onClose: () => void;
 	fileName: string;
 	documentId: string;
 	documentContent: string;
-	documentType: "coverSheet" | "pdfContent" | "complianceMatrix";
+	documentType: "coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck";
 	onSaveDocument: (id: string, name: string, content: string) => Promise<void>;
 }
 
@@ -204,6 +219,68 @@ export default function FileViewer({
 								<ReactMarkdown remarkPlugins={[remarkGfm]}>
 									{documentContent}
 								</ReactMarkdown>
+							</div>
+						</div>
+					)}
+					{documentType === "feasibilityCheck" && (
+						<div className="w-full overflow-x-auto">
+							<div className="p-4 bg-blue-50 rounded mb-4">
+								<h3 className="text-lg font-semibold text-blue-900 mb-2">Feasibility Analysis Results</h3>
+								<p className="text-blue-800 mb-2">The following analysis shows how well this RFP matches your organization&apos;s capabilities.</p>
+							</div>
+							<div className="px-4">
+								{(() => {
+									try {
+										// Parse the JSON data
+										const data = JSON.parse(documentContent) as FeasibilityData;
+										
+										if (!data || !data.result || !Array.isArray(data.result)) {
+											return (
+												<div className="p-4 text-red-500">
+													Invalid feasibility data format
+												</div>
+											);
+										}
+										
+										return (
+											<table className="w-full border-collapse">
+												<thead>
+													<tr className="bg-gray-100">
+														<th className="border border-gray-300 p-2 text-left">Req #</th>
+														<th className="border border-gray-300 p-2 text-left">Section</th>
+														<th className="border border-gray-300 p-2 text-left">Requirement</th>
+														<th className="border border-gray-300 p-2 text-left">Feasible</th>
+														<th className="border border-gray-300 p-2 text-left">Reason</th>
+														<th className="border border-gray-300 p-2 text-left">Citations</th>
+													</tr>
+												</thead>
+												<tbody>
+													{data.result.map((item: FeasibilityItem) => (
+														<tr key={item.req_no}>
+															<td className="border border-gray-300 p-2">{item.req_no}</td>
+															<td className="border border-gray-300 p-2">{item.section}</td>
+															<td className="border border-gray-300 p-2">{item.requirement}</td>
+															<td className={`border border-gray-300 p-2 ${
+																item.feasible === "Yes" ? "bg-green-100" :
+																item.feasible === "No" ? "bg-red-100" : "bg-yellow-100"
+															}`}>
+																{item.feasible}
+															</td>
+															<td className="border border-gray-300 p-2">{item.reason}</td>
+															<td className="border border-gray-300 p-2">{item.citations || "-"}</td>
+														</tr>
+													))}
+												</tbody>
+											</table>
+										);
+									} catch (e) {
+										return (
+											<div className="p-4 text-red-500">
+												Error parsing feasibility data: {e instanceof Error ? e.message : String(e)}
+											</div>
+										);
+									}
+								})()}
 							</div>
 						</div>
 					)}
