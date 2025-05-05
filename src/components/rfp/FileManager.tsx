@@ -32,7 +32,7 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 	// const [allDocuments, setAllDocuments] = useState<Document[]>(initialDocuments);
 	// const [allFolders] = useState<Folder[]>(initialFolders);
 	const [documentType, setDocumentType] = useState<
-		"coverSheet" | "pdfContent" | "complianceMatrix"
+		"coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
 	>("coverSheet");
 	const [processingStatus, setProcessingStatus] = useState<{
 		isProcessing: boolean;
@@ -162,9 +162,9 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 	const handleFileSelect = useCallback(
 		async (
 			file: Document,
-			contentType: "coverSheet" | "pdfContent" | "complianceMatrix"
+			contentType: "coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
 		) => {
-			console.log("handleFileSelect called for:", file.name);
+			console.log("handleFileSelect called for:", file.name, contentType);
 			setOpenFileName(file.name);
 			setIsLoading(true);
 
@@ -179,15 +179,46 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 				);
 
 				if (documentExists) {
-					const content = {
-						coverSheet: documentExists.coverSheet,
-						pdfContent: documentExists.pdfContent,
-						complianceMatrix: documentExists.complianceMatrix,
-					};
-					console.log("Document exists, using existing content:", file.name);
-					setShownContent(content[contentType]);
-					setDocumentId(documentExists.id.toString());
-					setDocumentType(contentType);
+					// Handle feasibility check separately
+					if (contentType === "feasibilityCheck") {
+						try {
+							// Call the feasibility check API
+							const response = await fetch(`/api/feasibility`, {
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify({
+									content: documentExists.complianceMatrix
+								}),
+							});
+							
+							if (!response.ok) {
+								throw new Error("Failed to perform feasibility check");
+							}
+							
+							const result = await response.json();
+							
+							// Display the feasibility check result
+							setShownContent(result.feasibilityResults || "Feasibility check performed. No specific results available.");
+							setDocumentId(documentExists.id.toString());
+							setDocumentType(contentType);
+						} catch (error) {
+							console.error("Error performing feasibility check:", error);
+							setShownContent("Error performing feasibility check. Please try again later.");
+						}
+					} else {
+						const content = {
+							coverSheet: documentExists.coverSheet,
+							pdfContent: documentExists.pdfContent,
+							complianceMatrix: documentExists.complianceMatrix,
+							feasibilityCheck: documentExists.complianceMatrix // Initially use compliance matrix content
+						};
+						console.log("Document exists, using existing content:", file.name);
+						setShownContent(content[contentType]);
+						setDocumentId(documentExists.id.toString());
+						setDocumentType(contentType);
+					}
 				} else {
 					console.log("Document doesn't exist, parsing and saving:", file.name);
 					const parsedContent = await parseExternalFile(file.name);
