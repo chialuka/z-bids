@@ -17,10 +17,9 @@ interface FileManagerProps {
 	// files: File[];
 	initialDocuments: Document[];
 	initialFolders: Folder[];
-	shouldProcessFiles?: boolean;
 }
 
-export default function RFPFiles({ initialDocuments, initialFolders, shouldProcessFiles = false }: FileManagerProps) {
+export default function RFPFiles({ initialDocuments, initialFolders }: FileManagerProps) {
 	const [shownContent, setShownContent] = useState<string>("");
 	// const [pdfContent, setPdfContent] = useState<string>("");
 	// const [complianceMatrix, setComplianceMatrix] = useState<string>("");
@@ -63,10 +62,7 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 		};
 	}, [processingStatus.isComplete, processingStatus.error]);
 
-	// Process files when component mounts if shouldProcessFiles is true
 	useEffect(() => {
-		if (!shouldProcessFiles) return;
-		
 		let isMounted = true;
 		
 		const processFiles = async () => {
@@ -139,7 +135,7 @@ export default function RFPFiles({ initialDocuments, initialFolders, shouldProce
 		return () => {
 			isMounted = false;
 		};
-	}, [shouldProcessFiles]);
+	}, []);
 
 	// Handle document saving with immediate updates
 	const handleSaveDocument = useCallback(

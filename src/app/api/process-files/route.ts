@@ -17,6 +17,7 @@ export async function GET() {
       (file) => !existingDocuments?.some((doc) => doc.name === file.name)
     );
 
+    console.log({ filesNotInDatabase });
     // If no files to process, return success
     if (!filesNotInDatabase.length) {
       return NextResponse.json({ 
