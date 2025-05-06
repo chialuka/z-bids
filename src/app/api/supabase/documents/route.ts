@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       description: requestBody.description,
       complianceMatrix: requestBody.complianceMatrix,
       dueDate: requestBody.dueDate ? new Date(requestBody.dueDate) : null,
-    });
+    }).returning();
     return NextResponse.json({ newDocument }, { status: 200 });
   } catch (error) {
     console.error(error);

@@ -16,23 +16,18 @@ interface DocumentData {
 	dueDate?: string;
 }
 
-const getBaseUrl = () => {
-	if (process.env.VERCEL_URL) {
-		return `https://${process.env.VERCEL_URL}`;
-	}
-	return "http://localhost:3000";
-};
-
 /**
  * Fetches all documents from the database
  */
 export async function fetchAllDocuments() {
 	try {
-		const response = await fetch(`${getBaseUrl()}/api/supabase/documents`);
+		const response = await fetch(
+			`${process.env.APP_URL}/api/supabase/documents`
+		);
 		if (!response.ok) {
 			throw new Error(`HTTP error! status: ${response.status}`);
 		}
-		const data = await response.json() as { allDocuments: Document[] };
+		const data = (await response.json()) as { allDocuments: Document[] };
 		return data.allDocuments;
 	} catch (error) {
 		console.error("Error fetching documents:", error);
@@ -109,17 +104,19 @@ export async function generateRFPAnalysis({
  */
 export async function saveDocument(document: DocumentData) {
 	try {
-		const response = await fetch("http://localhost:3000/api/supabase/documents", {
-			method: document.id ? "PATCH" : "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(document),
-		});
+		const response = await fetch(
+			`${process.env.APP_URL}/api/supabase/documents`,
+			{
+				method: document.id ? "PATCH" : "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(document),
+			}
+		);
 
-		const data = await response.json() as { newDocument: {id: string} };
-		console.log("Successfully saved document:", data);
-		return document.id ? { ...document, id: document.id } : data.newDocument;
+		const data = (await response.json()) as { newDocument: [{ id: string }] };
+		return document.id ? { ...document, id: document.id } : data.newDocument[0];
 	} catch (error) {
 		console.error("Error saving document:", error);
 		throw error;
@@ -128,11 +125,11 @@ export async function saveDocument(document: DocumentData) {
 
 export async function fetchAllFolders() {
 	try {
-		const response = await fetch(`${getBaseUrl()}/api/supabase/folders`);
+		const response = await fetch(`${process.env.APP_URL}/api/supabase/folders`);
 		if (!response.ok) {
 			throw new Error(`HTTP error! status: ${response.status}`);
 		}
-		const data = await response.json() as { allFolders: Folder[] };
+		const data = (await response.json()) as { allFolders: Folder[] };
 		return data.allFolders;
 	} catch (error) {
 		console.error("Error fetching folders:", error);
@@ -142,15 +139,15 @@ export async function fetchAllFolders() {
 
 export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 	try {
-    // If no files specified, find new files from uploadthing that aren't in the database
-    if (!filesToProcess) {
-      const existingDocuments = await fetchAllDocuments();
-      const files = (await listAllUploadThingFiles()) as UploadThingFile[];
-      filesToProcess = files.filter(
-        (file) => !existingDocuments?.some((doc) => doc.name === file.name)
-      );
-    }
-    
+		// If no files specified, find new files from uploadthing that aren't in the database
+		if (!filesToProcess) {
+			const existingDocuments = await fetchAllDocuments();
+			const files = (await listAllUploadThingFiles()) as UploadThingFile[];
+			filesToProcess = files.filter(
+				(file) => !existingDocuments?.some((doc) => doc.name === file.name)
+			);
+		}
+
 		if (filesToProcess.length) {
 			for (const file of filesToProcess) {
 				try {
@@ -161,26 +158,24 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 						pdfContent: parsedContent,
 					});
 					console.log("rfp analysis done");
-					const result = await fetch(
-						`${process.env.API_URL}/analyze`,
-						{
-							method: "POST",
-							body: JSON.stringify({ pdf_file_content: parsedContent }),
-							headers: {
-								"Content-Type": "application/json",
-							},
-						}
-					)
-          const complianceMatrix = await result.json() as { final_table: string };
-					console.log("compliance matrix done");
 
-					await saveDocument({
+					const newDocument = await saveDocument({
 						name: file.name,
 						coverSheet: rfpAnalysis.coverSheet || "",
 						description: rfpAnalysis.summary.summary,
 						dueDate: rfpAnalysis.summary.dueDate,
 						pdfContent: rfpAnalysis.pdfContent,
-						complianceMatrix: complianceMatrix.final_table,
+					});
+
+          fetch(`${process.env.API_URL}/analyze`, {
+						method: "POST",
+						body: JSON.stringify({
+							pdf_file_content: parsedContent,
+							document_id: newDocument.id,
+						}),
+						headers: {
+							"Content-Type": "application/json",
+						},
 					});
 				} catch (error) {
 					console.error(`Error processing file ${file.name}:`, error);
