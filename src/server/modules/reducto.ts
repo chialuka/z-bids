@@ -13,5 +13,6 @@ export const parseFile = async ({ documentUrl }: { documentUrl: string }) => {
 	});
 
   console.log("File parsed with reducto");
-	return file;
+  const data = await file.json();
+	return data;
 };
