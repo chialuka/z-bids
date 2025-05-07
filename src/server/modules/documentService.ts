@@ -141,6 +141,7 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 	try {
 		// If no files specified, find new files from uploadthing that aren't in the database
 		if (!filesToProcess) {
+      console.log("no files to process");
 			const existingDocuments = await fetchAllDocuments();
 			const files = (await listAllUploadThingFiles()) as UploadThingFile[];
 			filesToProcess = files.filter(
@@ -149,6 +150,7 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 		}
 
 		if (filesToProcess.length) {
+      console.log("files to process", filesToProcess);
 			for (const file of filesToProcess) {
 				try {
 					console.log("Processing file:", file.name);
