@@ -178,7 +178,7 @@ export default function FileViewer({
 				<ModalHeader className="flex flex-col gap-1">
 					<div className="flex items-center justify-between">
 						<h3 className="text-lg font-medium">{fileName}</h3>
-						<div className="flex items-center space-x-2">
+						{/* <div className="flex items-center space-x-2">
 							{tableData.length > 0 && (
 								<Button
 									color="primary"
@@ -190,7 +190,7 @@ export default function FileViewer({
 									{viewMode === "raw" ? "View as Table" : "View as Raw"}
 								</Button>
 							)}
-						</div>
+						</div> */}
 					</div>
 				</ModalHeader>
 				<ModalBody className="flex gap-4 overflow-x-hidden pb-40">

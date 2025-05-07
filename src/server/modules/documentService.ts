@@ -115,7 +115,7 @@ export async function saveDocument(document: DocumentData) {
 			}
 		);
 
-		const data = (await response.json()) as { newDocument: [{ id: string }] };
+		const data = (await response.json()) as { newDocument: Array<Document> };
 		return document.id ? { ...document, id: document.id } : data.newDocument[0];
 	} catch (error) {
 		console.error("Error saving document:", error);
@@ -167,7 +167,7 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 						pdfContent: rfpAnalysis.pdfContent,
 					});
 
-          fetch(`${process.env.API_URL}/analyze`, {
+          fetch(`${process.env.API_URL}/rfp/analyze`, {
 						method: "POST",
 						body: JSON.stringify({
 							pdf_file_content: parsedContent,
@@ -177,6 +177,7 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 							"Content-Type": "application/json",
 						},
 					});
+
 				} catch (error) {
 					console.error(`Error processing file ${file.name}:`, error);
 					// Continue with next file even if one fails

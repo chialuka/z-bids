@@ -19,7 +19,10 @@ interface FileManagerProps {
 	initialFolders: Folder[];
 }
 
-export default function RFPFiles({ initialDocuments, initialFolders }: FileManagerProps) {
+export default function RFPFiles({
+	initialDocuments,
+	initialFolders,
+}: FileManagerProps) {
 	const [shownContent, setShownContent] = useState<string>("");
 	// const [pdfContent, setPdfContent] = useState<string>("");
 	// const [complianceMatrix, setComplianceMatrix] = useState<string>("");
@@ -46,7 +49,7 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 		error: null,
 		message: "",
 		processedCount: 0,
-		remainingCount: 0
+		remainingCount: 0,
 	});
 
 	// Auto-hide success message after 3 seconds
@@ -54,7 +57,7 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 		let timer: NodeJS.Timeout;
 		if (processingStatus.isComplete && !processingStatus.error) {
 			timer = setTimeout(() => {
-				setProcessingStatus(prev => ({ ...prev, isComplete: false }));
+				setProcessingStatus((prev) => ({ ...prev, isComplete: false }));
 			}, 3000);
 		}
 		return () => {
@@ -64,29 +67,30 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 
 	useEffect(() => {
 		let isMounted = true;
-		
+
 		const processFiles = async () => {
 			try {
 				if (!isMounted) return;
-				
-				setProcessingStatus((prev) => ({ 
-					...prev, 
+
+				setProcessingStatus((prev) => ({
+					...prev,
 					isProcessing: true,
-					message: prev.processedCount > 0 
-						? `Processed ${prev.processedCount} files. Processing next file...` 
-						: "Processing files..."
+					message:
+						prev.processedCount > 0
+							? `Processed ${prev.processedCount} files. Processing next file...`
+							: "Processing files...",
 				}));
-				
-				const response = await fetch('/api/process-files');
-				
+
+				const response = await fetch("/api/process-files");
+
 				if (!response.ok) {
-					throw new Error('Failed to process files');
+					throw new Error("Failed to process files");
 				}
-				
+
 				const data = await response.json();
-				
+
 				if (!data.success) {
-					throw new Error(data.error || 'Failed to process files');
+					throw new Error(data.error || "Failed to process files");
 				}
 
 				// If no more files to process, mark as complete
@@ -96,11 +100,12 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 							...prev,
 							isProcessing: false,
 							isComplete: true,
-							message: data.processedFile 
-								? `Processed file ${data.processedFile}. All files processed.` 
+							message: data.processedFile
+								? `Processed file ${data.processedFile}. All files processed.`
 								: "No files needed processing.",
-							processedCount: prev.processedCount + (data.processedFile ? 1 : 0),
-							remainingCount: 0
+							processedCount:
+								prev.processedCount + (data.processedFile ? 1 : 0),
+							remainingCount: 0,
 						}));
 					}
 				} else {
@@ -110,20 +115,21 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 							...prev,
 							message: `Processed file ${data.processedFile}. ${data.remainingFiles} files remaining.`,
 							processedCount: prev.processedCount + 1,
-							remainingCount: data.remainingFiles
+							remainingCount: data.remainingFiles,
 						}));
-						
+
 						// Continue processing if more files exist
 						processFiles();
 					}
 				}
 			} catch (err) {
-				console.error('Error processing files:', err);
+				console.error("Error processing files:", err);
 				if (isMounted) {
 					setProcessingStatus((prev) => ({
 						...prev,
 						isProcessing: false,
-						error: err instanceof Error ? err.message : 'Failed to process files'
+						error:
+							err instanceof Error ? err.message : "Failed to process files",
 					}));
 				}
 			}
@@ -131,7 +137,7 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 
 		// Start processing files sequentially
 		processFiles();
-		
+
 		return () => {
 			isMounted = false;
 		};
@@ -158,7 +164,11 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 	const handleFileSelect = useCallback(
 		async (
 			file: Document,
-			contentType: "coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
+			contentType:
+				| "coverSheet"
+				| "pdfContent"
+				| "complianceMatrix"
+				| "feasibilityCheck"
 		) => {
 			console.log("handleFileSelect called for:", file.name, contentType);
 			setOpenFileName(file.name);
@@ -175,46 +185,16 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 				);
 
 				if (documentExists) {
-					// Handle feasibility check separately
-					if (contentType === "feasibilityCheck") {
-						try {
-							// Call the feasibility check API
-							const response = await fetch(`/api/feasibility`, {
-								method: "POST",
-								headers: {
-									"Content-Type": "application/json",
-								},
-								body: JSON.stringify({
-									content: documentExists.complianceMatrix
-								}),
-							});
-							
-							if (!response.ok) {
-								throw new Error("Failed to perform feasibility check");
-							}
-							
-							const result = await response.json();
-							
-							// Display the feasibility check result
-							setShownContent(JSON.stringify(result.data.result) || "Feasibility check performed. No specific results available.");
-							setDocumentId(documentExists.id.toString());
-							setDocumentType(contentType);
-						} catch (error) {
-							console.error("Error performing feasibility check:", error);
-							setShownContent("Error performing feasibility check. Please try again later.");
-						}
-					} else {
-						const content = {
-							coverSheet: documentExists.coverSheet,
-							pdfContent: documentExists.pdfContent,
-							complianceMatrix: documentExists.complianceMatrix,
-							feasibilityCheck: documentExists.complianceMatrix // Initially use compliance matrix content
-						};
-						console.log("Document exists, using existing content:", file.name);
-						setShownContent(content[contentType]);
-						setDocumentId(documentExists.id.toString());
-						setDocumentType(contentType);
-					}
+					const content = {
+						coverSheet: documentExists.coverSheet,
+						pdfContent: documentExists.pdfContent,
+						complianceMatrix: documentExists.complianceMatrix,
+						feasibilityCheck: documentExists.feasibilityCheck,
+					};
+					console.log("Document exists, using existing content:", file.name);
+					setShownContent(content[contentType]);
+					setDocumentId(documentExists.id.toString());
+					setDocumentType(contentType);
 				} else {
 					console.log("Document doesn't exist, parsing and saving:", file.name);
 					const parsedContent = await parseExternalFile(file.name);
@@ -250,24 +230,25 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 					{processingStatus.message || "Processing files..."}
 					{processingStatus.processedCount > 0 && (
 						<div className="text-xs mt-1">
-							Processed: {processingStatus.processedCount}, Remaining: {processingStatus.remainingCount}
+							Processed: {processingStatus.processedCount}, Remaining:{" "}
+							{processingStatus.remainingCount}
 						</div>
 					)}
 				</div>
 			)}
-			
+
 			{processingStatus.error && (
 				<div className="mb-4 p-3 bg-red-50 rounded-md text-red-700">
 					{processingStatus.error}
 				</div>
 			)}
-			
+
 			{processingStatus.isComplete && !processingStatus.error && (
 				<div className="mb-4 p-3 bg-green-50 rounded-md text-green-700 animate-fade-out">
 					{processingStatus.message || "Files processed successfully"}
 				</div>
 			)}
-			
+
 			<section className="border rounded-lg p-1 sm:p-4 bg-white shadow-sm">
 				<div
 					onClick={() => setShowFolderContent(!showFolderContent)}

@@ -19,6 +19,7 @@ export interface Document {
 	pdfContent: string;
 	coverSheet: string;
 	complianceMatrix: string;
+	feasibilityCheck: string;
 	description?: string;
 	dueDate?: string;
   folderId?: number;

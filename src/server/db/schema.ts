@@ -7,6 +7,7 @@ export const documentsTable = pgTable("documents", {
   coverSheet: text(),
   complianceMatrix: text(),
   description: text(),
+  feasibilityCheck: text(),
   dueDate: timestamp(),
   folderId: integer().references(() => foldersTable.id),
   createdAt: timestamp().defaultNow(),
