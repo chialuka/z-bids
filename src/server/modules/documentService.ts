@@ -40,27 +40,32 @@ export async function fetchAllDocuments() {
  * @param fileKey - The key of the file to parse
  */
 export async function parseExternalFile(fileKey: string) {
-	try {
-		const document = await parseFile({
-			documentUrl: `https://pa6rt2x38u.ufs.sh/f/${fileKey}`,
-		});
-		if (
-			typeof document === "object" &&
-			document !== null &&
-			"data" in document
-		) {
-			const content = document.data.result.chunks
-				.map((chunk: { blocks: Array<{ content: string }> }) =>
-					chunk.blocks.map((block) => block.content).join("")
-				)
-				.join("");
-
-			return content;
-		}
-	} catch (error) {
-		console.error(error);
-		return error;
+	console.log("Starting parseExternalFile for:", fileKey);
+	const documentUrl = `https://pa6rt2x38u.ufs.sh/f/${fileKey}`;
+	console.log("Attempting to parse file from URL:", documentUrl);
+	
+	const document = await parseFile({
+		documentUrl,
+	});
+	console.log("Successfully received response from parseFile");
+	
+	if (
+		typeof document === "object" &&
+		document !== null &&
+		"data" in document
+	) {
+		console.log("Processing document chunks");
+		const content = document.data.result.chunks
+			.map((chunk: { blocks: Array<{ content: string }> }) =>
+				chunk.blocks.map((block) => block.content).join("")
+			)
+			.join("");
+		console.log("Successfully processed document chunks");
+		return content;
 	}
+	
+	console.error("Invalid document format received:", document);
+	throw new Error("Invalid document format");
 }
 
 export async function generateRFPAnalysis({
@@ -168,6 +173,8 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 						dueDate: rfpAnalysis.summary.dueDate,
 						pdfContent: rfpAnalysis.pdfContent,
 					});
+
+          return
 
           // fetch(`${process.env.API_URL}/rfp/analyze`, {
 					// 	method: "POST",
