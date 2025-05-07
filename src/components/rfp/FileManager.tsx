@@ -196,7 +196,7 @@ export default function RFPFiles({ initialDocuments, initialFolders }: FileManag
 							const result = await response.json();
 							
 							// Display the feasibility check result
-							setShownContent(result.feasibilityResults || "Feasibility check performed. No specific results available.");
+							setShownContent(JSON.stringify(result.data.result) || "Feasibility check performed. No specific results available.");
 							setDocumentId(documentExists.id.toString());
 							setDocumentType(contentType);
 						} catch (error) {

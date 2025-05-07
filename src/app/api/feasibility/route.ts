@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
 	const { content } = await req.json();
@@ -7,11 +7,15 @@ export async function POST(req: Request) {
 			`${process.env.API_URL}/rfp/feasibility`,
 			{
 				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
 				body: JSON.stringify({ content }),
 			}
 		);
+    const data = await feasibilityCheck.json();
 
-		return NextResponse.json(feasibilityCheck);
+		return NextResponse.json({ data });
 	} catch (error) {
 		console.error("Error in feasibility check:", error);
 		return NextResponse.json(
