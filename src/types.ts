@@ -93,3 +93,22 @@ export type SharePointFile = {
     siteId: string;
   };
 };
+
+export interface ReductoResponse {
+  job_id: string;
+  duration: number;
+  pdf_url: null;
+  usage: {
+    num_pages: number;
+  };
+  result: {
+    type: string;
+    chunks: Array<{
+      blocks: Array<{
+        content: string;
+      }>;
+    }>;
+    ocr: null;
+    custom: null;
+  };
+}

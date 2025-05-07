@@ -1,18 +1,6 @@
 import { NextResponse } from "next/server";
-
 import { parseFile } from "@/server/modules/reducto";
-
-interface ReductoResponse {
-	data: {
-		result: {
-			chunks: Array<{
-				blocks: Array<{
-					content: string;
-				}>;
-			}>;
-		};
-	};
-}
+import { ReductoResponse } from "@/types";
 
 export async function POST(request: Request) {
 	try {
@@ -28,11 +16,10 @@ export async function POST(request: Request) {
 		if (
 			typeof document === "object" &&
 			document !== null &&
-			"data" in document &&
-			"result" in document.data &&
-			"chunks" in document.data.result
+			"result" in document &&
+			"chunks" in document.result
 		) {
-			const content = document.data.result.chunks
+			const content = document.result.chunks
 				.map((chunk) =>
 					chunk.blocks.map((block) => block.content).join("")
 				)

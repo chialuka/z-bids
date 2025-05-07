@@ -23,10 +23,7 @@ interface FeasibilityItem {
 	citations: string;
 }
 
-interface FeasibilityData {
-	status: string;
-	results: FeasibilityItem[];
-}
+type FeasibilityData  = FeasibilityItem[];
 
 interface FileViewerProps {
 	isOpen: boolean;
@@ -233,8 +230,9 @@ export default function FileViewer({
 									try {
 										// Parse the JSON data
 										const data = JSON.parse(documentContent) as FeasibilityData;
+                    console.log({ data }, "feasibility data");
 										
-										if (!data || !data.results || !Array.isArray(data.results)) {
+										if (!data || !Array.isArray(data)) {
 											return (
 												<div className="p-4 text-red-500">
 													Invalid feasibility data format
@@ -255,7 +253,7 @@ export default function FileViewer({
 													</tr>
 												</thead>
 												<tbody>
-													{data.results.map((item: FeasibilityItem) => (
+													{data.map((item: FeasibilityItem) => (
 														<tr key={item.req_no}>
 															<td className="border border-gray-300 p-2">{item.req_no}</td>
 															<td className="border border-gray-300 p-2">{item.section}</td>

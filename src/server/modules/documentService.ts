@@ -3,7 +3,7 @@
 import { extractCoverSheet } from "@/server/modules/openai/generateCoverSheet";
 import { generateSummary } from "@/server/modules/openai/generateSummary";
 
-import { Document, File as UploadThingFile, Folder } from "@/types";
+import { Document, File as UploadThingFile, Folder, ReductoResponse } from "@/types";
 import { listAllUploadThingFiles } from "@/server/modules/uploadThing";
 import { parseFile } from "@/server/modules/reducto";
 
@@ -15,12 +15,6 @@ interface DocumentData {
 	complianceMatrix?: string;
 	description?: string;
 	dueDate?: string;
-}
-
-interface ReductoChunk {
-	blocks: Array<{
-		content: string;
-	}>;
 }
 
 /**
@@ -51,27 +45,20 @@ export async function parseExternalFile(fileKey: string) {
 	const documentUrl = `https://pa6rt2x38u.ufs.sh/f/${fileKey}`;
 	console.log("Attempting to parse file from URL:", documentUrl);
 	
-	const response = await parseFile({
+	const document = await parseFile({
 		documentUrl,
-	});
+	}) as ReductoResponse;
 	console.log("Successfully received response from parseFile");
-	
-	if (!response.ok) {
-		throw new Error(`Failed to parse file: ${response.statusText}`);
-	}
-
-	const document = await response.json();
 	
 	if (
 		typeof document === "object" &&
 		document !== null &&
-		"data" in document &&
-		"result" in document.data &&
-		"chunks" in document.data.result
+		"result" in document &&
+		"chunks" in document.result
 	) {
 		console.log("Processing document chunks");
-		const content = document.data.result.chunks
-			.map((chunk: ReductoChunk) =>
+		const content = document.result.chunks
+			.map((chunk) =>
 				chunk.blocks.map((block) => block.content).join("")
 			)
 			.join("");
