@@ -181,7 +181,7 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 					});
 					console.log("rfp analysis done");
 
-					await saveDocument({
+					const newDocument = await saveDocument({
 						name: file.name,
 						coverSheet: rfpAnalysis.coverSheet || "",
 						description: rfpAnalysis.summary.summary,
@@ -189,18 +189,17 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 						pdfContent: rfpAnalysis.pdfContent,
 					});
 
-          return
 
-          // fetch(`${process.env.API_URL}/rfp/analyze`, {
-					// 	method: "POST",
-					// 	body: JSON.stringify({
-					// 		pdf_file_content: parsedContent,
-					// 		document_id: newDocument.id,
-					// 	}),
-					// 	headers: {
-					// 		"Content-Type": "application/json",
-					// 	},
-					// });
+          fetch(`${process.env.API_URL}/rfp/analyze`, {
+						method: "POST",
+						body: JSON.stringify({
+							pdf_file_content: parsedContent,
+							document_id: newDocument.id,
+						}),
+						headers: {
+							"Content-Type": "application/json",
+						},
+					});
 
 				} catch (error) {
 					console.error(`Error processing file ${file.name}:`, error);
