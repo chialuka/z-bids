@@ -134,7 +134,7 @@ export default function FileList({
 
 									<p className="text-xs text-gray-500">
 										{file.dueDate
-											? new Date(file.dueDate).toLocaleDateString()
+											? new Date(file.dueDate).toISOString().split('T')[0]
 											: "No due date"}
 									</p>
 
@@ -270,7 +270,7 @@ export default function FileList({
 													</TableCell>
 													<TableCell className="w-1/12">
 														{file.dueDate
-															? new Date(file.dueDate).toLocaleDateString()
+															? new Date(file.dueDate).toISOString().split('T')[0]
 															: "No due date"}
 													</TableCell>
 												</TableRow>
