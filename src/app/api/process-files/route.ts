@@ -6,11 +6,13 @@ import { File as UploadThingFile } from '@/types';
 // This API processes a single file at a time to avoid Vercel's 60-second timeout
 export async function GET() {
   try {
+    console.log("processing files");
     // Get existing docs and all upload thing files
     const [existingDocuments, files] = await Promise.all([
       fetchAllDocuments(),
       listAllUploadThingFiles() as Promise<UploadThingFile[]>
     ]);
+    console.log({ existingDocuments, files });
 
     // Find files not in database
     const filesNotInDatabase = files.filter(

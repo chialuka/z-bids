@@ -6,7 +6,6 @@ import FileList from "./FileList";
 import FileViewer from "./FileViewer";
 import {
 	fetchAllDocuments,
-	// fetchAllFolders,
 	parseExternalFile,
 	saveDocument,
 } from "@/services/document";
@@ -14,7 +13,6 @@ import { OpenFolderIcon } from "../icons/OpenFolderIcon";
 import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
 
 interface FileManagerProps {
-	// files: File[];
 	initialDocuments: Document[];
 	initialFolders: Folder[];
 }
@@ -24,15 +22,11 @@ export default function RFPFiles({
 	initialFolders,
 }: FileManagerProps) {
 	const [shownContent, setShownContent] = useState<string>("");
-	// const [pdfContent, setPdfContent] = useState<string>("");
-	// const [complianceMatrix, setComplianceMatrix] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 	const [openFileName, setOpenFileName] = useState<string>("");
 	const [documentId, setDocumentId] = useState<string>("");
 	const [showFolderContent, setShowFolderContent] = useState<boolean>(false);
-	// const [allDocuments, setAllDocuments] = useState<Document[]>(initialDocuments);
-	// const [allFolders] = useState<Folder[]>(initialFolders);
 	const [documentType, setDocumentType] = useState<
 		"coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
 	>("coverSheet");
