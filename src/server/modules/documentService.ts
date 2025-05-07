@@ -55,7 +55,7 @@ export async function parseExternalFile(fileKey: string) {
 		"data" in document
 	) {
 		console.log("Processing document chunks");
-    const document = await data.json();
+    const document = await data.json() as { data: { result: { chunks: Array<{ blocks: Array<{ content: string }> }> } } };
 		const content = document.data.result.chunks
 			.map((chunk: { blocks: Array<{ content: string }> }) =>
 				chunk.blocks.map((block) => block.content).join("")
