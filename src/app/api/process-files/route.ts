@@ -12,14 +12,13 @@ export async function GET() {
       fetchAllDocuments(),
       listAllUploadThingFiles() as Promise<UploadThingFile[]>
     ]);
-    console.log({ existingDocuments, files });
 
     // Find files not in database
     const filesNotInDatabase = files.filter(
       (file) => !existingDocuments?.some((doc) => doc.name === file.name)
     );
 
-    console.log({ filesNotInDatabase });
+    console.log({ length: filesNotInDatabase.length });
     // If no files to process, return success
     if (!filesNotInDatabase.length) {
       return NextResponse.json({ 

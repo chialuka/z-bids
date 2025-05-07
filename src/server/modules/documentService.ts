@@ -44,7 +44,7 @@ export async function parseExternalFile(fileKey: string) {
 	const documentUrl = `https://pa6rt2x38u.ufs.sh/f/${fileKey}`;
 	console.log("Attempting to parse file from URL:", documentUrl);
 	
-	const document = await parseFile({
+	const data = await parseFile({
 		documentUrl,
 	});
 	console.log("Successfully received response from parseFile");
@@ -55,6 +55,7 @@ export async function parseExternalFile(fileKey: string) {
 		"data" in document
 	) {
 		console.log("Processing document chunks");
+    const document = await data.json();
 		const content = document.data.result.chunks
 			.map((chunk: { blocks: Array<{ content: string }> }) =>
 				chunk.blocks.map((block) => block.content).join("")
