@@ -25,7 +25,6 @@ export default function RFPFiles({
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 	const [openFileName, setOpenFileName] = useState<string>("");
-	const [documentId, setDocumentId] = useState<string>("");
 	const [showFolderContent, setShowFolderContent] = useState<boolean>(false);
 	const [documentType, setDocumentType] = useState<
 		"coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
@@ -138,22 +137,22 @@ export default function RFPFiles({
 	}, []);
 
 	// Handle document saving with immediate updates
-	const handleSaveDocument = useCallback(
-		async (id: string, name: string, updatedContent: string) => {
-			try {
-				console.log("handleSaveDocument called for:", name);
-				setShownContent(updatedContent);
-				await saveDocument({
-					id,
-					name,
-					coverSheet: updatedContent,
-				});
-			} catch (error) {
-				console.error("Error saving document:", error);
-			}
-		},
-		[]
-	);
+	// const handleSaveDocument = useCallback(
+	// 	async (id: string, name: string, updatedContent: string) => {
+	// 		try {
+	// 			console.log("handleSaveDocument called for:", name);
+	// 			setShownContent(updatedContent);
+	// 			await saveDocument({
+	// 				id,
+	// 				name,
+	// 				coverSheet: updatedContent,
+	// 			});
+	// 		} catch (error) {
+	// 			console.error("Error saving document:", error);
+	// 		}
+	// 	},
+	// 	[]
+	// );
 
 	const handleFileSelect = useCallback(
 		async (
@@ -185,9 +184,46 @@ export default function RFPFiles({
 						complianceMatrix: documentExists.complianceMatrix,
 						feasibilityCheck: documentExists.feasibilityCheck,
 					};
-					console.log("Document exists, using existing content:", file.name);
-					setShownContent(content[contentType]);
-					setDocumentId(documentExists.id.toString());
+
+					let value = content[contentType];
+					if (!value && (contentType === "coverSheet" || contentType === "complianceMatrix" || contentType === "feasibilityCheck")) {
+						const fetcherFunctions = {
+							coverSheet: async () => {
+								const res = await fetch("api/cover-sheet", {
+									method: "POST",
+									body: JSON.stringify({ document: documentExists.pdfContent, documentId: documentExists.id }),
+								});
+								const data = await res.json();
+								return data.coverSheet;
+							},
+							complianceMatrix: async () => {
+								const res = await fetch("api/compliance-matrix", {
+									method: "POST",
+									body: JSON.stringify({
+										pdf_file_content: documentExists.pdfContent,
+										document_id: documentExists.id,
+									}),
+								});
+								const data = await res.json();
+								return data.content;
+							},
+							feasibilityCheck: async () => {
+								const res = await fetch("api/feasibility", {
+									method: "POST",
+									body: JSON.stringify({
+										content: documentExists.pdfContent,
+										document_id: documentExists.id,
+									}),
+								});
+								const data = await res.json();
+								return data.content;
+							},
+						};
+
+						value = await fetcherFunctions[contentType]();
+					}
+          console.log({ value }, "the fetched value");
+					setShownContent(value);
 					setDocumentType(contentType);
 				} else {
 					console.log("Document doesn't exist, parsing and saving:", file.name);
@@ -196,7 +232,7 @@ export default function RFPFiles({
 					setShownContent(parsedContent.sanitizedContent);
 
 					// Save the document only once
-					const newDocument = await saveDocument({
+					await saveDocument({
 						name: file.name,
 						coverSheet: parsedContent.sanitizedContent,
 						description: parsedContent.summary.summary,
@@ -205,7 +241,7 @@ export default function RFPFiles({
 						complianceMatrix: parsedContent.complianceMatrix,
 					});
 
-					setDocumentId(newDocument.id.toString());
+					setDocumentType(contentType);
 				}
 			} catch (error) {
 				console.error("Error processing file:", error);
@@ -275,11 +311,10 @@ export default function RFPFiles({
 				isOpen={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
 				fileName={openFileName}
-				documentId={documentId}
 				documentContent={shownContent}
-				onSaveDocument={handleSaveDocument}
 				documentType={documentType}
 			/>
 		</section>
 	);
 }
+

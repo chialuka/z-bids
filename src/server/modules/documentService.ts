@@ -146,7 +146,7 @@ export async function fetchAllFolders() {
 
 export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 	try {
-		// If no files specified, find new files from uploadthing that aren't in the database
+		// If no files specified, find new files from UploadThing that aren't in the database
 		if (!filesToProcess) {
       console.log("no files to process");
 			const existingDocuments = await fetchAllDocuments();

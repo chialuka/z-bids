@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	Modal,
 	ModalContent,
@@ -9,10 +9,9 @@ import {
 } from "@heroui/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from 'remark-gfm';
-import DocumentEditor from "./DocumentEditor";
+import { RfpData } from "@/server/modules/openai/generateCoverSheet";
 import SearchBar from "./SearchBar";
-import TableEditor from "./TableEditor";
-
+import { convertJsonToMarkdown, convertToExcel } from "@/lib/utils";
 // Define types for feasibility check data
 interface FeasibilityItem {
 	req_no: number;
@@ -29,139 +28,226 @@ interface FileViewerProps {
 	isOpen: boolean;
 	onClose: () => void;
 	fileName: string;
-	documentId: string;
 	documentContent: string;
 	documentType: "coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck";
-	onSaveDocument: (id: string, name: string, content: string) => Promise<void>;
 }
 
 export default function FileViewer({
 	isOpen,
 	onClose,
 	fileName,
-	documentId,
 	documentContent,
 	documentType,
-	onSaveDocument,
 }: FileViewerProps) {
 	const [content, setContent] = useState<string>("");
-	const [viewMode, setViewMode] = useState<"raw" | "table">("table");
-	const [tableData, setTableData] = useState<string[][]>([]);
+	const [jsonData, setJsonData] = useState<RfpData | null>(null);
+	const [downloadLoading, setDownloadLoading] = useState<boolean>(false);
 
 	useEffect(() => {
-		if (documentContent) {
+		if (documentContent && documentType === "coverSheet") {
 			try {
-				if (typeof documentContent === "string") {
-					setContent(documentContent);
-					// Parse CSV content for table view with exactly three columns
-					const parseCSVToThreeColumns = (csvString: string) => {
-						// Split by newlines first
-						const lines = csvString.split('\n');
-						const processedRows = [];
-						
-						for (const line of lines) {
-							// Skip empty lines
-							if (!line.trim()) continue;
-							
-							// Regex to match CSV format with consideration for quotes
-							// This matches: field,field,"field with, commas"
-							const parts = [];
-							let inQuotes = false;
-							let currentPart = '';
-							let columnCount = 0;
-							
-							// Process character by character
-							for (let i = 0; i < line.length; i++) {
-								const char = line[i];
-								
-								if (char === '"') {
-									// Toggle quote state
-									inQuotes = !inQuotes;
-									// Add the quote to the current part
-									currentPart += char;
-								} else if (char === ',' && !inQuotes) {
-									// End of field - but only process first two columns
-									parts.push(currentPart);
-									currentPart = '';
-									columnCount++;
-									
-									// If we already have two columns, the rest goes into the third
-									if (columnCount >= 2) {
-										// Get the rest of the line
-										currentPart = line.substring(i + 1);
-										break;
-									}
-								} else {
-									// Regular character
-									currentPart += char;
-								}
-							}
-							
-							// Add the last part
-							if (currentPart) {
-								parts.push(currentPart);
-							}
-							
-							// Ensure we have exactly 3 columns
-							while (parts.length < 3) {
-								parts.push('');
-							}
-							
-							// Truncate to 3 columns if somehow we have more
-							if (parts.length > 3) {
-								parts.length = 3;
-							}
-							
-							processedRows.push(parts);
-						}
-						
-						// Ensure we have at least one row with headers
-						if (processedRows.length === 0) {
-							processedRows.push(['Section', 'Subsection', 'Content']);
-						}
-						
-						return processedRows;
-					};
-					
-					const rows = parseCSVToThreeColumns(documentContent);
-					setTableData(rows);
-					// Automatically switch to table view if it looks like CSV
-					if (rows.length > 1 && rows[0].length > 1) {
-						setViewMode("table");
+				// Parse the JSON data for structured rendering
+				const data = typeof documentContent === "string" 
+					? JSON.parse(documentContent) 
+					: documentContent;
+				
+				setJsonData(data);
+				
+				// Also keep markdown version for download
+				let markdown = "";
+				try {
+					if (typeof documentContent === "string") {
+						markdown = convertJsonToMarkdown(documentContent);
+					} else {
+						markdown = convertJsonToMarkdown(JSON.stringify(documentContent));
 					}
-				} else {
-					const stringContent = JSON.stringify(documentContent, null, 2);
-					setContent(stringContent);
-					setTableData([]);
-					setViewMode("raw");
+					setContent(markdown);
+				} catch (error) {
+					console.error("Error parsing cover sheet JSON:", error);
+					setContent("");
 				}
 			} catch (error) {
-				console.error("Error parsing document content:", error);
+				console.error("Error parsing JSON data:", error);
+				setJsonData(null);
 				setContent("");
-				setTableData([]);
-				setViewMode("raw");
 			}
+		} else if (documentContent) {
+			setContent(documentContent);
+			setJsonData(null);
 		}
-	}, [documentContent]);
+	}, [documentContent, documentType]);
 
-	const handleDownloadCSV = () => {
+	const handleDownload = async () => {
 		if (!content) {
 			console.log("No content available for download");
 			return;
 		}
 
-		const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		link.href = URL.createObjectURL(blob);
-		link.download = `${fileName.replace(/\.[^/.]+$/, "")}.csv`;
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
+		setDownloadLoading(true);
+		try {
+			// Different download behavior based on documentType
+			if (documentType === "coverSheet") {
+				// Create Excel file for cover sheet
+				const excelData = await convertToExcel(documentContent);
+				
+				// Create and download the Excel file
+				const blob = new Blob([excelData], { 
+					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+				});
+				const link = document.createElement("a");
+				link.href = URL.createObjectURL(blob);
+				link.download = `${fileName.replace(/\.[^/.]+$/, "")}_cover_sheet.xlsx`;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+			} else {
+				// For other document types, download as text/markdown/CSV as appropriate
+				const mimeType = documentType === "complianceMatrix" ? "text/markdown" : "text/csv";
+				const extension = documentType === "complianceMatrix" ? "md" : "csv";
+				
+				const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
+				const link = document.createElement("a");
+				link.href = URL.createObjectURL(blob);
+				link.download = `${fileName.replace(/\.[^/.]+$/, "")}.${extension}`;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+			}
+		} catch (error) {
+			console.error("Error downloading file:", error);
+		} finally {
+			setDownloadLoading(false);
+		}
 	};
 
-	const handleSaveTableContent = async (newContent: string) => {
-		setContent(newContent);
-		await onSaveDocument(documentId, fileName, newContent);
+	// Format text to highlight labels
+	const formatValueWithLabels = (text: string): React.ReactNode | string => {
+		if (!text || typeof text !== 'string') return text;
+		
+		// Split by labels ("Label: Value" pattern)
+		if (text.includes(': ')) {
+			const parts = text.split(/(?<=^|;\s*)([^:;]+):\s*/g).filter(Boolean);
+			
+			if (parts.length <= 1) return text;
+			
+			return (
+				<div className="space-y-1">
+					{parts.map((part, index) => {
+						// Skip the parts that are values (every even-indexed item)
+						if (index % 2 === 1) return null;
+						
+						// Get the corresponding value (if exists)
+						const value = parts[index + 1] || '';
+						const label = part.trim();
+						
+						// If this is a valid label-value pair
+						if (label && index + 1 < parts.length) {
+							return (
+								<div key={index} className="flex flex-col">
+									<span className="font-medium text-gray-800">{label}:</span>
+									<span className="text-gray-700 pl-4">{value}</span>
+								</div>
+							);
+						}
+						
+						// Just output the text if not a label-value pair
+						return <span key={index}>{part}</span>;
+					})}
+				</div>
+			);
+		}
+		
+		return text;
+	};
+
+	const renderCoverSheetTable = () => {
+		if (!jsonData) return null;
+
+		return (
+			<div className="overflow-x-auto">
+				<h1 className="text-xl font-bold mb-6 text-center">RFP Cover Sheet</h1>
+				<table className="w-full border-collapse shadow-sm">
+					<tbody>
+						{Object.entries(jsonData).map(([section, content]) => {
+							// Format the section name nicely
+							const formattedSectionName = section
+								.replace(/([A-Z])/g, ' $1')
+								.replace(/^./, str => str.toUpperCase());
+							
+							// Generate rows for this section
+							const rows = [];
+							
+							// Add section header
+							rows.push(
+								<tr key={`section-${section}`}>
+									<td 
+										colSpan={2} 
+										className="bg-blue-50 p-3 font-bold text-blue-700"
+									>
+										{formattedSectionName.toUpperCase()}
+									</td>
+								</tr>
+							);
+							
+							// Add the fields and values
+							Object.entries(content).forEach(([key, value]) => {
+								// Handle empty values
+								const displayValue = value || "N/A";
+								
+								// Check if value contains semicolons (potential list)
+								if (typeof displayValue === 'string' && displayValue.includes(';')) {
+									const items = displayValue.split(';').map(item => item.trim()).filter(Boolean);
+									
+									// First item with label
+									rows.push(
+										<tr key={`${section}-${key}`} className="border-b border-gray-200">
+											<td className="p-4 border border-gray-300 font-medium text-gray-900 align-top" rowSpan={items.length}>
+												{key}
+											</td>
+											<td className="p-4 border border-gray-300 text-gray-700">
+												{formatValueWithLabels(items[0])}
+											</td>
+										</tr>
+									);
+									
+									// Subsequent items without label (using a slightly different style)
+									items.slice(1).forEach((item, index) => {
+										rows.push(
+											<tr key={`${section}-${key}-${index}`} className="border-b border-gray-200 bg-white">
+												<td className="p-4 border border-gray-300 text-gray-700 border-t-0">
+													{formatValueWithLabels(item)}
+												</td>
+											</tr>
+										);
+									});
+								} else {
+									// Regular single-value field
+									rows.push(
+										<tr key={`${section}-${key}`} className="border-b border-gray-200">
+											<td className="p-4 border border-gray-300 font-medium text-gray-900 w-1/3">
+												{key}
+											</td>
+											<td className="p-4 border border-gray-300 text-gray-700 whitespace-pre-wrap">
+												{formatValueWithLabels(displayValue)}
+											</td>
+										</tr>
+									);
+								}
+							});
+							
+							// Add an empty row after each section
+							rows.push(
+								<tr key={`section-${section}-spacer`} className="h-4 bg-gray-50/30">
+									<td colSpan={2} className="p-1"></td>
+								</tr>
+							);
+							
+							return rows;
+						})}
+					</tbody>
+				</table>
+			</div>
+		);
 	};
 
 	return (
@@ -175,39 +261,12 @@ export default function FileViewer({
 				<ModalHeader className="flex flex-col gap-1">
 					<div className="flex items-center justify-between">
 						<h3 className="text-lg font-medium">{fileName}</h3>
-						{/* <div className="flex items-center space-x-2">
-							{tableData.length > 0 && (
-								<Button
-									color="primary"
-									variant="light"
-									onPress={() =>
-										setViewMode(viewMode === "raw" ? "table" : "raw")
-									}
-								>
-									{viewMode === "raw" ? "View as Table" : "View as Raw"}
-								</Button>
-							)}
-						</div> */}
 					</div>
 				</ModalHeader>
 				<ModalBody className="flex gap-4 overflow-x-hidden pb-40">
 					{documentType === "coverSheet" && (
-						<div className="w-full overflow-x-auto">
-							{viewMode === "table" ? (
-								<>
-									<TableEditor
-										tableData={tableData}
-										onSave={handleSaveTableContent}
-									/>
-								</>
-							) : (
-								<DocumentEditor
-									documentId={documentId}
-									initialContent={documentContent}
-									documentName={fileName}
-									onSave={onSaveDocument}
-								/>
-							)}
+						<div className="w-full">
+							{renderCoverSheetTable()}
 						</div>
 					)}
 					{documentType === "complianceMatrix" && (
@@ -230,7 +289,6 @@ export default function FileViewer({
 									try {
 										// Parse the JSON data
 										const data = JSON.parse(documentContent) as FeasibilityData;
-                    console.log({ data }, "feasibility data");
 										
 										if (!data || !Array.isArray(data)) {
 											return (
@@ -291,10 +349,11 @@ export default function FileViewer({
 						<Button
 							color="primary"
 							variant="solid"
-							onPress={handleDownloadCSV}
+							onPress={handleDownload}
 							className="font-semibold"
+							isLoading={downloadLoading}
 						>
-							Download Document
+							{downloadLoading ? "Generating..." : (documentType === "coverSheet" ? "Download as Excel" : "Download Document")}
 						</Button>
 					</div>
 					<Button color="danger" variant="light" onPress={onClose}>
