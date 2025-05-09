@@ -1,7 +1,7 @@
 import { ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import * as XLSX from 'xlsx';
-import { extractCoverSheet, RfpData, SectionFields } from '../server/modules/openai/generateCoverSheet';
+import { RfpData, SectionFields } from '../server/modules/openai/generateCoverSheet';
 /**
  * A utility function that combines multiple class names and resolves Tailwind CSS conflicts
  * 
@@ -169,19 +169,4 @@ export const convertToExcel = async (jsonString: string): Promise<Uint8Array> =>
 		console.error('Error converting JSON to Excel:', error);
 		throw error;
 	}
-};
-
-export const prepareCoverSheetData = async (document: string) => {
-	const jsonData = await extractCoverSheet({ document });
-	if (!jsonData) {
-		return {
-			json: "{}",
-			markdown: "",
-		};
-	}
-	const markdownData = convertJsonToMarkdown(jsonData);
-	return {
-		json: jsonData,
-		markdown: markdownData,
-	};
 };

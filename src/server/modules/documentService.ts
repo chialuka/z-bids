@@ -15,6 +15,7 @@ interface DocumentData {
 	complianceMatrix?: string;
 	description?: string;
 	dueDate?: string;
+	folderId?: number;
 }
 
 /**
@@ -174,8 +175,8 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 						description: rfpAnalysis.summary.summary,
 						dueDate: rfpAnalysis.summary.dueDate,
 						pdfContent: rfpAnalysis.pdfContent,
+            folderId: Math.round(Math.random() * 2),
 					});
-
 
           fetch(`${process.env.API_URL}/rfp/analyze`, {
 						method: "POST",
