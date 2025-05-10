@@ -4,6 +4,9 @@ import { useState, useCallback, useEffect } from "react";
 import { Document, Folder } from "@/types";
 import FileList from "./FileList";
 import FileViewer from "./FileViewer";
+import { Button, Input } from "@heroui/react";
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
 	fetchAllDocuments,
 	parseExternalFile,
@@ -11,7 +14,7 @@ import {
 } from "@/services/document";
 import { OpenFolderIcon } from "../icons/OpenFolderIcon";
 import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
-
+import { PlusIcon } from "../icons/PlusIcon";
 interface FileManagerProps {
 	initialDocuments: Document[];
 	initialFolders: Folder[];
@@ -25,6 +28,10 @@ export default function RFPFiles({
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 	const [openFileName, setOpenFileName] = useState<string>("");
+	const [folders, setFolders] = useState<Folder[]>(initialFolders);
+	const [documents, setDocuments] = useState<Document[]>(initialDocuments);
+	const [showNewFolderInput, setShowNewFolderInput] = useState<boolean>(false);
+	const [newFolderName, setNewFolderName] = useState<string>("");
 	const [showFolderContent, setShowFolderContent] = useState<boolean>(false);
 	const [documentType, setDocumentType] = useState<
 		"coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
@@ -135,6 +142,64 @@ export default function RFPFiles({
 			isMounted = false;
 		};
 	}, []);
+
+  const addNewFolder = async ({ name }: { name: string }) => {
+    // Check if folder with same name already exists
+    const folderExists = folders.some(folder => folder.name.toLowerCase() === name.toLowerCase());
+    
+    if (!folderExists) {
+      const newFolder = {
+        id: folders[folders.length - 1] ? folders[folders.length - 1].id + 1 : 1,
+        name,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      setFolders([...folders, newFolder]);
+      const res = await fetch("/api/supabase/folders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+
+      if (data.newFolder.id !== newFolder.id) {
+        setFolders([...folders, data.newFolder[0]]);
+      }
+    }
+  }
+
+	// Function to move a file from one folder to another
+	const moveFile = async (fileId: number, targetFolderId: number) => {
+		try {
+      console.log("moving file", fileId, targetFolderId);
+			// Update local state
+			const updatedDocuments = documents.map(doc => 
+				doc.id === fileId ? { ...doc, folderId: targetFolderId } : doc
+			);
+			setDocuments(updatedDocuments);
+			
+			// Update in database
+			const docToUpdate = documents.find(doc => doc.id === fileId);
+			if (docToUpdate) {
+				await fetch('/api/supabase/documents', {
+					method: 'PATCH',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						id: fileId,
+						folderId: targetFolderId,
+					}),
+				});
+			}
+		} catch (error) {
+			console.error('Error moving file:', error);
+			// Revert the state change if the API call fails
+			setDocuments([...documents]);
+		}
+	};
 
 	// Handle document saving with immediate updates
 	// const handleSaveDocument = useCallback(
@@ -279,33 +344,73 @@ export default function RFPFiles({
 				</div>
 			)}
 
-			<section className="border rounded-lg p-1 sm:p-4 bg-white shadow-sm">
-				<div
-					onClick={() => setShowFolderContent(!showFolderContent)}
-					className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-3 sm:p-2 rounded-md transition-colors touch-manipulation"
-				>
-					{showFolderContent ? (
-						<OpenFolderIcon className="text-blue-500 transition-transform duration-500 w-6 h-6 sm:w-5 sm:h-5" />
-					) : (
-						<ClosedFolderIcon className="text-blue-500 transition-transform duration-500 w-6 h-6 sm:w-5 sm:h-5" />
-					)}
-					<p className="font-medium text-gray-700 text-base sm:text-sm">
-						RFP Files
-					</p>
-				</div>
-				<div
-					className={`${showFolderContent ? "opacity-100" : "h-0 opacity-0"}`}
-				>
-					<div className="h-full">
-						<FileList
-							files={initialDocuments}
-							isLoading={isLoading}
-							onFileSelect={handleFileSelect}
-							folders={initialFolders}
-						/>
+			<DndProvider backend={HTML5Backend}>
+				<section className="border rounded-lg p-1 sm:p-4 bg-white shadow-sm">
+					<div className="flex items-center justify-between p-3 sm:p-2 rounded-md">
+						<div
+							onClick={() => setShowFolderContent(!showFolderContent)}
+							className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-md transition-colors touch-manipulation"
+						>
+							{showFolderContent ? (
+								<OpenFolderIcon className="text-blue-500 transition-transform duration-500 w-6 h-6 sm:w-5 sm:h-5" />
+							) : (
+								<ClosedFolderIcon className="text-blue-500 transition-transform duration-500 w-6 h-6 sm:w-5 sm:h-5" />
+							)}
+							<p className="font-medium text-gray-700 text-base sm:text-sm">
+								RFP Files
+							</p>
+						</div>
+						<Button 
+							onPress={() => {
+								setShowNewFolderInput(!showNewFolderInput);
+							}}
+							variant="ghost"
+							size="sm"
+							className="flex items-center gap-1 text-blue-500 hover:text-blue-600 text-sm bg-blue-50 hover:bg-blue-100"
+						>
+							<PlusIcon className="w-4 h-4" />
+							<span>Add New Folder</span>
+						</Button>
 					</div>
-				</div>
-			</section>
+					{showNewFolderInput && (
+						<div className="mt-2 p-2 bg-gray-50 rounded-md flex items-center gap-2">
+							<Input
+								type="text"
+								placeholder="New Folder Name"
+								className="flex-1"
+								value={newFolderName}
+								onChange={(e) => setNewFolderName(e.target.value)}
+							/>
+							<Button 
+								onPress={() => {
+									if (newFolderName.trim()) {
+										addNewFolder({ name: newFolderName });
+										setNewFolderName("");
+										setShowNewFolderInput(false);
+									}
+								}}
+								variant="ghost"
+								size="sm"
+							>
+								Add Folder
+							</Button>
+						</div>
+					)}
+					<div
+						className={`${showFolderContent ? "opacity-100" : "h-0 opacity-0"}`}
+					>
+						<div className="h-full">
+							<FileList
+								files={documents}
+								isLoading={isLoading}
+								onFileSelect={handleFileSelect}
+								folders={folders}
+								onMoveFile={moveFile}
+							/>
+						</div>
+					</div>
+				</section>
+			</DndProvider>
 
 			<FileViewer
 				isOpen={isModalOpen}

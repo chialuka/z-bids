@@ -37,7 +37,7 @@ export async function PATCH(request: Request) {
   try {
     const requestBody = await request.json();
     const updatedDocument = await db.update(documentsTable).set({
-      ...requestBody,
+      folderId: requestBody.folderId,
     }).where(eq(documentsTable.id, requestBody.id));
     return NextResponse.json({ updatedDocument }, { status: 200 });
   } catch (error) {
