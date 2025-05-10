@@ -170,3 +170,120 @@ export const convertToExcel = async (jsonString: string): Promise<Uint8Array> =>
 		throw error;
 	}
 };
+
+export const convertMarkdownTableToExcel = async (markdownString: string): Promise<Uint8Array> => {
+	try {
+		// Initialize XLSX workbook
+		const wb = XLSX.utils.book_new();
+		
+		// Split the markdown into lines for processing
+		const lines = markdownString.split('\n');
+		
+		// Extract the summary (everything before the table)
+		const summaryLines = [];
+		let tableStartIndex = -1;
+		
+		// Find where the table starts
+		for (let i = 0; i < lines.length; i++) {
+			// Look for a line that starts with | and contains multiple |
+			// This is likely the header row of a markdown table
+			if (lines[i].trim().startsWith('|') && lines[i].includes('|')) {
+				tableStartIndex = i;
+				break;
+			}
+			// Add non-empty lines to summary
+			if (lines[i].trim()) {
+				summaryLines.push(lines[i]);
+			}
+		}
+		
+		// Create a summary worksheet
+		const summarySheet = XLSX.utils.aoa_to_sheet([["Compliance Matrix Summary"]]);
+		
+		// Add summary content as rows
+		XLSX.utils.sheet_add_aoa(summarySheet, 
+			summaryLines.map(line => {
+				// Clean up markdown formatting
+				return [line.replace(/^#+\s+/, '').replace(/\*\*/g, '')];
+			}), 
+			{ origin: "A2" }
+		);
+		
+		// Set column width for summary
+		summarySheet['!cols'] = [{ wch: 100 }];
+		
+		// Add the summary sheet to workbook
+		XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
+		
+		// If table was found, create the main table worksheet
+		if (tableStartIndex >= 0 && tableStartIndex < lines.length) {
+			// Extract table data
+			const tableData = [];
+			
+			// Process header row
+			const headerRow = lines[tableStartIndex];
+			const headers = headerRow.split('|')
+				.map(cell => cell.trim())
+				.filter(cell => cell.length > 0);
+			
+			// Add headers as first row of table data
+			tableData.push(headers);
+			
+			// Skip the separator row (typically |---|---|...)
+			// Process data rows (all rows after the separator row)
+			for (let i = tableStartIndex + 2; i < lines.length; i++) {
+				const line = lines[i].trim();
+				
+				// Only process lines that look like table rows
+				if (line.startsWith('|') && line.includes('|')) {
+					const cells = line.split('|')
+						.map(cell => cell.trim())
+						.filter(cell => cell.length > 0);
+					
+					// Only add rows with data
+					if (cells.length > 0) {
+						tableData.push(cells);
+					}
+				}
+			}
+			
+			// Only create table sheet if we have data
+			if (tableData.length > 1) { // Header + at least one data row
+				const tableSheet = XLSX.utils.aoa_to_sheet(tableData);
+				
+				// Set appropriate column widths
+				tableSheet['!cols'] = [
+					{ wch: 5 },  // Page
+					{ wch: 15 }, // Section
+					{ wch: 50 }, // Requirement Text
+					{ wch: 15 }, // Obligation Verb
+					{ wch: 15 }, // Obligation Level
+					{ wch: 20 }, // Cross-References
+					{ wch: 30 }  // Human Review Flag
+				];
+				
+				// Format the header row
+				const headerRange = XLSX.utils.decode_range(tableSheet['!ref'] || "A1");
+				for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+					const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
+					if (!tableSheet[headerCell]) continue;
+					
+					tableSheet[headerCell].s = {
+						font: { bold: true },
+						fill: { fgColor: { rgb: "E6E6E6" } }
+					};
+				}
+				
+				// Add the table sheet to workbook
+				XLSX.utils.book_append_sheet(wb, tableSheet, "Requirements");
+			}
+		}
+		
+		// Write the workbook to buffer and return
+		const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+		return new Uint8Array(excelBuffer);
+	} catch (error) {
+		console.error('Error converting markdown table to Excel:', error);
+		throw error;
+	}
+};

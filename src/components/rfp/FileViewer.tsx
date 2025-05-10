@@ -9,7 +9,7 @@ import {
 } from "@heroui/react";
 import { RfpData } from "@/server/modules/openai/generateCoverSheet";
 import SearchBar from "./SearchBar";
-import { convertJsonToMarkdown, convertToExcel } from "@/lib/utils";
+import { convertJsonToMarkdown, convertToExcel, convertMarkdownTableToExcel } from "@/lib/utils";
 
 // Define types for feasibility check data
 interface FeasibilityItem {
@@ -99,15 +99,26 @@ export default function FileViewer({
 				document.body.appendChild(link);
 				link.click();
 				document.body.removeChild(link);
-			} else {
-				// For other document types, download as text/markdown/CSV as appropriate
-				const mimeType = documentType === "complianceMatrix" ? "text/markdown" : "text/csv";
-				const extension = documentType === "complianceMatrix" ? "md" : "csv";
+			} else if (documentType === "complianceMatrix") {
+				// Create Excel file for compliance matrix using dedicated converter
+				const excelData = await convertMarkdownTableToExcel(documentContent);
 				
-				const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
+				// Create and download the Excel file
+				const blob = new Blob([excelData], { 
+					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+				});
 				const link = document.createElement("a");
 				link.href = URL.createObjectURL(blob);
-				link.download = `${fileName.replace(/\.[^/.]+$/, "")}.${extension}`;
+				link.download = `${fileName.replace(/\.[^/.]+$/, "")}_compliance_matrix.xlsx`;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+			} else {
+				// For other document types, download as CSV
+				const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+				const link = document.createElement("a");
+				link.href = URL.createObjectURL(blob);
+				link.download = `${fileName.replace(/\.[^/.]+$/, "")}.csv`;
 				document.body.appendChild(link);
 				link.click();
 				document.body.removeChild(link);
