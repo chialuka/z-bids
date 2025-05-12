@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Document, Folder } from "@/types";
 import FileList from "./FileList";
 import FileViewer from "./FileViewer";
-import { Button, Input, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
+import { Button, Input, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
@@ -14,7 +14,6 @@ import {
 } from "@/services/document";
 import { OpenFolderIcon } from "../icons/OpenFolderIcon";
 import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
-import { PlusIcon } from "../icons/PlusIcon";
 interface FileManagerProps {
 	initialDocuments: Document[];
 	initialFolders: Folder[];
@@ -430,10 +429,10 @@ export default function RFPFiles({
 
 			<DndProvider backend={HTML5Backend}>
 				<section className="border rounded-lg p-1 sm:p-4 bg-white shadow-sm">
-					<div className="flex items-center justify-between p-3 sm:p-2 rounded-md">
+					<div className="flex items-center p-3 sm:p-2 rounded-md">
 						<div
 							onClick={() => setShowFolderContent(!showFolderContent)}
-							className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-md transition-colors touch-manipulation"
+							className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-md transition-colors touch-manipulation w-[95%]"
 						>
 							{showFolderContent ? (
 								<OpenFolderIcon className="text-blue-500 transition-transform duration-500 w-6 h-6 sm:w-5 sm:h-5" />
@@ -444,17 +443,19 @@ export default function RFPFiles({
 								RFP Files
 							</p>
 						</div>
-						<Button 
-							onPress={() => {
-								setShowNewFolderInput(!showNewFolderInput);
-							}}
-							variant="ghost"
-							size="sm"
-							className="flex items-center gap-1 text-blue-500 hover:text-blue-600 text-sm bg-blue-50 hover:bg-blue-100"
-						>
-							<PlusIcon className="w-4 h-4" />
-							<span>Add New Folder</span>
-						</Button>
+						<Dropdown>
+							<DropdownTrigger>
+								<Button isIconOnly variant="ghost" size="sm">
+									<span className="sr-only">Open menu</span>
+									<svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>
+								</Button>
+							</DropdownTrigger>
+							<DropdownMenu>
+								<DropdownItem key="add" onPress={() => setShowNewFolderInput(true)}>
+									Add New Folder
+								</DropdownItem>
+							</DropdownMenu>
+						</Dropdown>
 					</div>
 					{showNewFolderInput && (
 						<div className="mt-2 p-2 bg-gray-50 rounded-md flex items-center gap-2">
