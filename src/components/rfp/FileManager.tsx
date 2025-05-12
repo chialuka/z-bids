@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Document, Folder } from "@/types";
 import FileList from "./FileList";
 import FileViewer from "./FileViewer";
-import { Button, Input } from "@heroui/react";
+import { Button, Input, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
@@ -51,6 +51,8 @@ export default function RFPFiles({
 		processedCount: 0,
 		remainingCount: 0,
 	});
+	const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
 	// Auto-hide success message after 3 seconds
 	useEffect(() => {
@@ -318,6 +320,88 @@ export default function RFPFiles({
 		[]
 	);
 
+	// Add folder editing and deletion functions
+	const editFolder = async (folderId: number, newName: string) => {
+		try {
+			// First update locally for immediate UI feedback
+			const updatedFolders = folders.map(folder => 
+				folder.id === folderId ? { ...folder, name: newName } : folder
+			);
+			setFolders(updatedFolders);
+			
+			// Then update on the server
+			const res = await fetch("/api/supabase/folders", {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ id: folderId, name: newName }),
+			});
+			
+			const data = await res.json();
+			console.log("Updated folder:", data);
+		} catch (error) {
+			console.error("Error updating folder:", error);
+		}
+	};
+
+	const deleteFolder = async (folderId: number) => {
+		// Open the confirmation dialog
+		setFolderToDelete(folderId);
+		setShowDeleteConfirm(true);
+	};
+
+	const confirmDeleteFolder = async () => {
+		if (!folderToDelete) return;
+		
+		try {
+			const folderId = folderToDelete;
+			// Update files to remove folder association
+			const updatedDocuments = documents.map(doc => 
+				doc.folderId === folderId ? { ...doc, folderId: undefined } : doc
+			);
+			setDocuments(updatedDocuments);
+			
+			// Remove folder from state
+			const updatedFolders = folders.filter(folder => folder.id !== folderId);
+			setFolders(updatedFolders);
+			
+			// Update on the server
+			const res = await fetch("/api/supabase/folders", {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ id: folderId }),
+			});
+			
+			const data = await res.json();
+			console.log("Deleted folder:", data);
+			
+			// Update files in database to remove folder association
+			const filesInFolder = documents.filter(doc => doc.folderId === folderId);
+			
+			for (const file of filesInFolder) {
+				await fetch('/api/supabase/documents', {
+					method: 'PATCH',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						id: file.id,
+						folderId: undefined,
+					}),
+				});
+			}
+		} catch (error) {
+			console.error("Error deleting folder:", error);
+		} finally {
+			// Close the dialog
+			setShowDeleteConfirm(false);
+			setFolderToDelete(null);
+		}
+	};
+
 	return (
 		<section>
 			{processingStatus.isProcessing && (
@@ -406,6 +490,8 @@ export default function RFPFiles({
 								onFileSelect={handleFileSelect}
 								folders={folders}
 								onMoveFile={moveFile}
+								onEditFolder={editFolder}
+								onDeleteFolder={deleteFolder}
 							/>
 						</div>
 					</div>
@@ -419,6 +505,33 @@ export default function RFPFiles({
 				documentContent={shownContent}
 				documentType={documentType}
 			/>
+
+			{/* Delete Confirmation Modal */}
+			<Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
+				<ModalContent>
+					<ModalHeader>
+						<h3>Delete Folder</h3>
+					</ModalHeader>
+					<ModalBody>
+						<p>Are you sure you want to delete this folder? Files inside will be moved to Uncategorized.</p>
+					</ModalBody>
+					<ModalFooter>
+						<Button 
+							color="danger" 
+							variant="solid" 
+							onPress={confirmDeleteFolder}
+						>
+							Delete
+						</Button>
+						<Button 
+							variant="light" 
+							onPress={() => setShowDeleteConfirm(false)}
+						>
+							Cancel
+						</Button>
+					</ModalFooter>
+				</ModalContent>
+			</Modal>
 		</section>
 	);
 }
