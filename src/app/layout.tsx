@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { Providers } from "./heroui-provider";
 import SidebarNav from "../components/SidebarNav";
+import { LoadingIndicator } from "@/components/LoadingIndicator";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +32,7 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<Providers>
+					<LoadingIndicator />
 					<div className="min-h-screen bg-[#f7fafd] flex">
 						<SidebarNav />
 						<div className="flex-1">{children}</div>

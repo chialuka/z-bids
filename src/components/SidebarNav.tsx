@@ -1,7 +1,6 @@
 "use client";
-import Link from "next/link";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { HomeIcon } from "@heroicons/react/24/outline";
 import { BookOpenIcon } from "@heroicons/react/24/outline";
@@ -9,7 +8,9 @@ import { BookOpenIcon } from "@heroicons/react/24/outline";
 export default function SidebarNav() {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [activeLink, setActiveLink] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   
   // Load collapsed state from localStorage on component mount
   useEffect(() => {
@@ -25,6 +26,18 @@ export default function SidebarNav() {
     setCollapsed(newState);
     localStorage.setItem("sidebarCollapsed", String(newState));
   };
+
+  // Handle navigation with loading state
+  const handleNavigation = (href: string) => {
+    if (href === pathname) return;
+    setActiveLink(href);
+    router.push(href);
+  };
+
+  // Reset active link when navigation completes
+  useEffect(() => {
+    setActiveLink(null);
+  }, [pathname]);
 
   return (
     <>
@@ -105,12 +118,14 @@ export default function SidebarNav() {
         
         {/* Navigation Links */}
         <div className="flex flex-col space-y-1 w-full">
-          <Link 
-            href="/" 
+          <button 
+            onClick={() => handleNavigation("/")}
             className={`
-              flex items-center gap-3 py-2 rounded-lg font-medium transition-colors 
+              text-left flex items-center gap-3 py-2 rounded-lg font-medium transition-colors 
               ${collapsed ? "justify-center" : "px-3"} 
               ${pathname === "/" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"}
+              ${activeLink === "/" ? "opacity-70" : ""}
+              relative
             `}
           > 
             <HomeIcon className="w-6 h-6 flex-shrink-0" />
@@ -120,14 +135,24 @@ export default function SidebarNav() {
             >
               Home
             </span>
-          </Link>
+            {activeLink === "/" && (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4">
+                <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </span>
+            )}
+          </button>
           
-          <Link 
-            href="/knowledge-base" 
+          <button 
+            onClick={() => handleNavigation("/knowledge-base")}
             className={`
-              flex items-center gap-3 py-2 rounded-lg font-medium transition-colors
+              text-left flex items-center gap-3 py-2 rounded-lg font-medium transition-colors
               ${collapsed ? "justify-center" : "px-3"}
               ${pathname === "/knowledge-base" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"}
+              ${activeLink === "/knowledge-base" ? "opacity-70" : ""}
+              relative
             `}
           > 
             <BookOpenIcon className="w-6 h-6 flex-shrink-0" />
@@ -137,7 +162,15 @@ export default function SidebarNav() {
             >
               Knowledge Base
             </span>
-          </Link>
+            {activeLink === "/knowledge-base" && (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4">
+                <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </span>
+            )}
+          </button>
         </div>
       </nav>
     </>
