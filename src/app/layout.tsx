@@ -3,10 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { extractRouterConfig } from "uploadthing/server";
 
-import { ourFileRouter } from "@/app/api/uploadthing/core";
+import { ourFileRouter } from "../app/api/uploadthing/core";
 import { Providers } from "./heroui-provider";
+import SidebarNav from "../components/SidebarNav";
 import "./globals.css";
-import SidebarNav from "@/components/SidebarNav";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
