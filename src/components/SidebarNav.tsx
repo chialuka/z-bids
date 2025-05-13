@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { HomeIcon } from "@heroicons/react/24/outline";
 import { BookOpenIcon } from "@heroicons/react/24/outline";
@@ -8,6 +9,22 @@ import { BookOpenIcon } from "@heroicons/react/24/outline";
 export default function SidebarNav() {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  
+  // Load collapsed state from localStorage on component mount
+  useEffect(() => {
+    const savedCollapsed = localStorage.getItem("sidebarCollapsed");
+    if (savedCollapsed !== null) {
+      setCollapsed(savedCollapsed === "true");
+    }
+  }, []);
+  
+  // Update localStorage when collapsed state changes
+  const toggleCollapsed = () => {
+    const newState = !collapsed;
+    setCollapsed(newState);
+    localStorage.setItem("sidebarCollapsed", String(newState));
+  };
 
   return (
     <>
@@ -34,24 +51,32 @@ export default function SidebarNav() {
       {/* Sidebar */}
       <nav
         className={`
-          fixed z-50 top-0 left-0 h-full bg-white border-r border-gray-200 flex flex-col py-8 px-4 shadow-sm
-          transition-all duration-200
+          fixed z-50 top-0 left-0 h-full bg-white border-r border-gray-200 flex flex-col py-8
+          transition-all duration-200 ease-in-out
           md:static md:flex
-          ${open ? "translate-x-0 w-56" : "-translate-x-full w-56"} md:translate-x-0
-          ${collapsed ? "md:w-20 px-2" : "md:w-56 px-4"}
+          ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
         `}
-        style={{ minHeight: "100vh" }}
+        style={{
+          minHeight: "100vh",
+          width: collapsed ? "5rem" : "14rem", /* Fixed width based on collapsed state */
+          padding: collapsed ? "0.5rem" : "1rem",
+        }}
         aria-label="Sidebar navigation"
       >
         {/* Collapse/Expand button (desktop only) */}
-        <div className="hidden md:flex items-center justify-between mb-8 md:mb-8">
-          <div className={`text-2xl font-bold text-blue-600 transition-all duration-200 ${collapsed ? "opacity-0 w-0" : "opacity-100 w-auto"}`}>Z-Bids</div>
+        <div className="hidden md:flex items-center justify-between mb-8">
+          <div 
+            className={`text-2xl font-bold text-blue-600 transition-opacity duration-200 overflow-hidden whitespace-nowrap ${collapsed ? "opacity-0 w-0" : "opacity-100"}`}
+            style={{ maxWidth: collapsed ? "0" : "100%" }}
+          >
+            Z-Bids
+          </div>
           <Button
             variant="ghost"
             size="icon"
-            className="md:inline-flex md:ml-2"
+            className="md:inline-flex flex-shrink-0"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={() => setCollapsed((c) => !c)}
+            onClick={toggleCollapsed}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               {collapsed ? (
@@ -64,11 +89,11 @@ export default function SidebarNav() {
         </div>
         {/* Close button on mobile */}
         <div className="flex items-center justify-between mb-8 md:hidden">
-          <div className="text-2xl font-bold text-blue-600">Z-Bids</div>
+          <div className="text-2xl font-bold text-blue-600 overflow-hidden text-ellipsis whitespace-nowrap">Z-Bids</div>
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden flex-shrink-0"
             aria-label="Close sidebar"
             onClick={() => setOpen(false)}
           >
@@ -77,14 +102,43 @@ export default function SidebarNav() {
             </svg>
           </Button>
         </div>
-        <Link href="/" className={`flex items-center gap-3 mb-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition-colors ${collapsed ? "justify-center px-2" : ""}`}> 
-          <HomeIcon className="w-6 h-6" />
-          <span className={`transition-all duration-200 ${collapsed ? "opacity-0 w-0" : "opacity-100 w-auto"}`}>Home</span>
-        </Link>
-        <Link href="/knowledge-base" className={`flex items-center gap-3 mb-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition-colors ${collapsed ? "justify-center px-2" : ""}`}> 
-          <BookOpenIcon className="w-6 h-6" />
-          <span className={`transition-all duration-200 ${collapsed ? "opacity-0 w-0" : "opacity-100 w-auto"}`}>Knowledge Base</span>
-        </Link>
+        
+        {/* Navigation Links */}
+        <div className="flex flex-col space-y-1 w-full">
+          <Link 
+            href="/" 
+            className={`
+              flex items-center gap-3 py-2 rounded-lg font-medium transition-colors 
+              ${collapsed ? "justify-center" : "px-3"} 
+              ${pathname === "/" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"}
+            `}
+          > 
+            <HomeIcon className="w-6 h-6 flex-shrink-0" />
+            <span 
+              className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${collapsed ? "w-0" : "w-full"}`}
+              style={{ maxWidth: collapsed ? "0" : "100%" }}
+            >
+              Home
+            </span>
+          </Link>
+          
+          <Link 
+            href="/knowledge-base" 
+            className={`
+              flex items-center gap-3 py-2 rounded-lg font-medium transition-colors
+              ${collapsed ? "justify-center" : "px-3"}
+              ${pathname === "/knowledge-base" ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"}
+            `}
+          > 
+            <BookOpenIcon className="w-6 h-6 flex-shrink-0" />
+            <span 
+              className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${collapsed ? "w-0" : "w-full"}`}
+              style={{ maxWidth: collapsed ? "0" : "100%" }}
+            >
+              Knowledge Base
+            </span>
+          </Link>
+        </div>
       </nav>
     </>
   );
