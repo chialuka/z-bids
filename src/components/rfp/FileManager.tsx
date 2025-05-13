@@ -255,7 +255,7 @@ export default function RFPFiles({
 					if (!value && (contentType === "coverSheet" || contentType === "complianceMatrix" || contentType === "feasibilityCheck")) {
 						const fetcherFunctions = {
 							coverSheet: async () => {
-								const res = await fetch("api/cover-sheet", {
+								const res = await fetch("/api/cover-sheet", {
 									method: "POST",
 									body: JSON.stringify({ document: documentExists.pdfContent, documentId: documentExists.id }),
 								});
@@ -263,7 +263,7 @@ export default function RFPFiles({
 								return data.coverSheet;
 							},
 							complianceMatrix: async () => {
-								const res = await fetch("api/compliance-matrix", {
+								const res = await fetch("/api/compliance-matrix", {
 									method: "POST",
 									body: JSON.stringify({
 										pdf_file_content: documentExists.pdfContent,
@@ -271,24 +271,27 @@ export default function RFPFiles({
 									}),
 								});
 								const data = await res.json();
-								return data.content;
+								return data.complianceMatrix;
 							},
 							feasibilityCheck: async () => {
-								const res = await fetch("api/feasibility", {
+								const res = await fetch("/api/feasibility", {
 									method: "POST",
 									body: JSON.stringify({
-										content: documentExists.pdfContent,
+										content: documentExists.complianceMatrix,
 										document_id: documentExists.id,
 									}),
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
 								});
 								const data = await res.json();
-								return data.content;
+								return data.result;
 							},
 						};
 
-						value = await fetcherFunctions[contentType]();
+						const data = await fetcherFunctions[contentType]();
+            value = JSON.stringify(data);
 					}
-          console.log({ value }, "the fetched value");
 					setShownContent(value);
 					setDocumentType(contentType);
 				} else {
