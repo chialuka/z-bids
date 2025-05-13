@@ -1,9 +1,8 @@
 import type { Config } from "tailwindcss";
 import { heroui } from "@heroui/react";
-import { withUt } from "uploadthing/tw";
 import tailwindcssAnimate from "tailwindcss-animate";
 
-export default withUt({
+export default {
 	darkMode: ["class"],
 	content: [
 		"./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -63,8 +62,5 @@ export default withUt({
 		},
 	},
 	plugins: [heroui(), tailwindcssAnimate],
-} satisfies Config);
+} satisfies Config;
 
-// export default {
-
-// } satisfies Config;
