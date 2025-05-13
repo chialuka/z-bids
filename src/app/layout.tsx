@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 
 import { Providers } from "./heroui-provider";
 import SidebarNav from "../components/SidebarNav";
@@ -32,7 +33,9 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<Providers>
-					<LoadingIndicator />
+					<Suspense fallback={null}>
+						<LoadingIndicator />
+					</Suspense>
 					<div className="min-h-screen bg-[#f7fafd] flex">
 						<SidebarNav />
 						<div className="flex-1">{children}</div>
