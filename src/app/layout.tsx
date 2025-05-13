@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import { Suspense } from "react";
+
 import { Providers } from "./heroui-provider";
+import SidebarNav from "../components/SidebarNav";
+import { LoadingIndicator } from "@/components/LoadingIndicator";
+import "./globals.css";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -28,7 +32,15 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<Providers>{children}</Providers>
+				<Providers>
+					<Suspense fallback={null}>
+						<LoadingIndicator />
+					</Suspense>
+					<div className="min-h-screen bg-[#f7fafd] flex">
+						<SidebarNav />
+						<div className="flex-1">{children}</div>
+					</div>
+				</Providers>
 			</body>
 		</html>
 	);

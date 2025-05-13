@@ -595,6 +595,7 @@ export default function FileViewer({
 							<div className="px-4">
 								{(() => {
 									try {
+                    console.log("the document content", typeof documentContent);
 										// Parse the JSON data
 										const data = JSON.parse(documentContent) as FeasibilityData;
 										
