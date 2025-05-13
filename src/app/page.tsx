@@ -22,7 +22,7 @@ import {
 export default async function Home() {
 	const [uploadThingFiles, sharePointFiles, documents, folders] =
 		(await Promise.all([
-			listAllUploadThingFiles(),
+			listAllUploadThingFiles({folder: "rfp"}),
 			getSharePointFiles(),
 			fetchAllDocuments(),
 			fetchAllFolders(),
@@ -46,7 +46,10 @@ export default async function Home() {
 					const fileToUpload = new File([fileBlob], file.name, {
 						type: file.file.mimeType,
 					});
-					await uploadFileToUploadThing(fileToUpload);
+					await uploadFileToUploadThing({
+						file: fileToUpload,
+						folder: "rfp",
+					});
 				} catch (error) {
 					console.error(`Failed to process file ${file.name}:`, error);
 				}
@@ -57,10 +60,7 @@ export default async function Home() {
 	return (
 		<main className="m-2 sm:m-5 lg:m-10">
 			<h1 className="font-bold text-3xl text-center py-10">Z BIDS</h1>
-			<RFPFiles
-				initialDocuments={documents}
-				initialFolders={folders}
-			/>
+			<RFPFiles initialDocuments={documents} initialFolders={folders} />
 			{/* <Assistant /> */}
 		</main>
 	);

@@ -151,7 +151,7 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 		if (!filesToProcess) {
       console.log("no files to process");
 			const existingDocuments = await fetchAllDocuments();
-			const files = (await listAllUploadThingFiles()) as UploadThingFile[];
+			const files = (await listAllUploadThingFiles({ folder: "rfp" })) as UploadThingFile[];
 			filesToProcess = files.filter(
 				(file) => !existingDocuments?.some((doc) => doc.name === file.name)
 			);

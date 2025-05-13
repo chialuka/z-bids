@@ -240,7 +240,7 @@ export default function FileList({
 	console.log({ uniqueFolders });
 	useEffect(() => {
 		const fetchUploadThingFiles = async () => {
-			const response = await fetch("/api/uploadThing");
+			const response = await fetch("/api/uploadthing");
 			const data = await response.json();
 			setUploadThingFiles(data.files);
 		};
