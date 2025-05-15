@@ -1,36 +1,22 @@
 import { NextResponse } from "next/server";
-import { parseFile } from "@/server/modules/reducto";
+import { syncFileParsing } from "@/server/modules/reducto";
 import { ReductoResponse } from "@/types";
 
 export async function POST(request: Request) {
 	try {
 		const requestBody = await request.json();
-		const response = await parseFile({ documentUrl: requestBody.documentUrl });
-		
+		const response = await syncFileParsing({ documentUrl: requestBody.documentUrl });
+
 		if (!response.ok) {
 			throw new Error(`Failed to parse file: ${response.statusText}`);
 		}
 
-		const document = await response.json() as ReductoResponse;
-		
-		if (
-			typeof document === "object" &&
-			document !== null &&
-			"result" in document &&
-			"chunks" in document.result
-		) {
-			const content = document.result.chunks
-				.map((chunk) =>
-					chunk.blocks.map((block) => block.content).join("")
-				)
-				.join("");
+		const document = (await response.json()) as ReductoResponse;
+		console.log(document, "document from parsing");
 
-			return NextResponse.json({
-				content,
-			});
-		}
-
-		throw new Error("Invalid response format from Reducto");
+		return NextResponse.json({
+			message: "Success",
+		});
 	} catch (error) {
 		console.error(error);
 		return NextResponse.json(

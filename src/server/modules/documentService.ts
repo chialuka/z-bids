@@ -1,11 +1,13 @@
-// import DOMPurify from "dompurify";
-// import fetch from "node-fetch";
 import { extractCoverSheet } from "@/server/modules/openai/generateCoverSheet";
 import { generateSummary } from "@/server/modules/openai/generateSummary";
 
-import { Document, File as UploadThingFile, Folder, ReductoResponse } from "@/types";
+import {
+	Document,
+	File as UploadThingFile,
+	Folder,
+} from "@/types";
 import { listAllUploadThingFiles } from "@/server/modules/uploadThing";
-import { parseFile } from "@/server/modules/reducto";
+import { parseFileAsync, syncFileParsing } from "@/server/modules/reducto";
 
 interface DocumentData {
 	id?: string;
@@ -45,30 +47,10 @@ export async function parseExternalFile(fileKey: string) {
 	console.log("Starting parseExternalFile for:", fileKey);
 	const documentUrl = `https://pa6rt2x38u.ufs.sh/f/${fileKey}`;
 	console.log("Attempting to parse file from URL:", documentUrl);
-	
-	const document = await parseFile({
+
+	await syncFileParsing({
 		documentUrl,
-	}) as ReductoResponse;
-	console.log("Successfully received response from parseFile");
-	
-	if (
-		typeof document === "object" &&
-		document !== null &&
-		"result" in document &&
-		"chunks" in document.result
-	) {
-		console.log("Processing document chunks");
-		const content = document.result.chunks
-			.map((chunk) =>
-				chunk.blocks.map((block) => block.content).join("")
-			)
-			.join("");
-		console.log("Successfully processed document chunks");
-		return content;
-	}
-	
-	console.error("Invalid document format received:", document);
-	throw new Error("Invalid document format");
+	})
 }
 
 export async function generateRFPAnalysis({
@@ -149,46 +131,28 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 	try {
 		// If no files specified, find new files from UploadThing that aren't in the database
 		if (!filesToProcess) {
-      console.log("no files to process");
+			console.log("no files to process");
 			const existingDocuments = await fetchAllDocuments();
-			const files = (await listAllUploadThingFiles({ folder: "rfp" })) as UploadThingFile[];
+			const files = (await listAllUploadThingFiles({
+				folder: "rfp",
+			})) as UploadThingFile[];
 			filesToProcess = files.filter(
 				(file) => !existingDocuments?.some((doc) => doc.name === file.name)
 			);
 		}
 
 		if (filesToProcess.length) {
-      console.log("files to process", filesToProcess);
+			console.log("files to process", filesToProcess);
 			for (const file of filesToProcess) {
 				try {
 					console.log("Processing file:", file.name);
-					const parsedContent = await parseExternalFile(file.key);
-					console.log("reducto parsing done");
-					const rfpAnalysis = await generateRFPAnalysis({
-						pdfContent: parsedContent,
-					});
-					console.log("rfp analysis done");
-
-					const newDocument = await saveDocument({
-						name: file.name,
-						coverSheet: rfpAnalysis.coverSheet || "",
-						description: rfpAnalysis.summary.summary,
-						dueDate: rfpAnalysis.summary.dueDate,
-						pdfContent: rfpAnalysis.pdfContent,
-            folderId: Math.round(Math.random() * 2),
-					});
-
-          fetch(`${process.env.API_URL}/rfp/analyze`, {
-						method: "POST",
-						body: JSON.stringify({
-							pdf_file_content: parsedContent,
-							document_id: newDocument.id,
-						}),
-						headers: {
-							"Content-Type": "application/json",
-						},
-					});
-
+          const documentUrl = `https://pa6rt2x38u.ufs.sh/f/${file.key}`;
+          console.log("Attempting to parse file from URL:", documentUrl);
+        
+          await parseFileAsync({
+            documentUrl,
+            fileName: file.name,
+          })
 				} catch (error) {
 					console.error(`Error processing file ${file.name}:`, error);
 					// Continue with next file even if one fails
@@ -202,3 +166,51 @@ export async function processNewFiles(filesToProcess?: UploadThingFile[]) {
 		return { success: false, error };
 	}
 }
+
+export const llmAnalysis = async ({
+	document,
+	fileName,
+}: {
+	document: string;
+	fileName: string;
+}) => {
+	try {
+		// First operation
+		const rfpAnalysis = await generateRFPAnalysis({
+			pdfContent: document,
+		});
+		console.log("RFP analysis completed successfully");
+		
+		// Second operation
+		const newDocument = await saveDocument({
+			name: fileName,
+			coverSheet: rfpAnalysis.coverSheet || "",
+			description: rfpAnalysis.summary.summary,
+			dueDate: rfpAnalysis.summary.dueDate,
+			pdfContent: rfpAnalysis.pdfContent,
+			folderId: Math.round(Math.random() * 2),
+		});
+		console.log("Document saved successfully with ID:", newDocument.id);
+		
+		// Third operation - currently not awaited or error-handled
+		// Add error handling even though we're not awaiting
+		fetch(`${process.env.API_URL}/rfp/analyze`, {
+			method: "POST",
+			body: JSON.stringify({
+				pdf_file_content: document,
+				document_id: newDocument.id,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}).catch(error => {
+			console.error("Failed to complete analysis API:", error);
+			// Could implement retry logic here if needed
+		});
+		
+		console.log("Analysis process completed for:", fileName);
+	} catch (error) {
+		console.error("LLM analysis process failed:", error);
+		throw error; // Re-throw so the caller's catch can handle it too
+	}
+};
