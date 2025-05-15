@@ -10,7 +10,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
 	fetchAllDocuments,
 	parseExternalFile,
-	saveDocument,
+	// saveDocument,
 } from "@/services/document";
 import { OpenFolderIcon } from "../icons/OpenFolderIcon";
 import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
@@ -301,14 +301,14 @@ export default function RFPFiles({
 					setShownContent(parsedContent.sanitizedContent);
 
 					// Save the document only once
-					await saveDocument({
-						name: file.name,
-						coverSheet: parsedContent.sanitizedContent,
-						description: parsedContent.summary.summary,
-						dueDate: parsedContent.summary.dueDate,
-						pdfContent: parsedContent.pdfContent,
-						complianceMatrix: parsedContent.complianceMatrix,
-					});
+					// await saveDocument({
+					// 	name: file.name,
+					// 	coverSheet: parsedContent.sanitizedContent,
+					// 	description: parsedContent.summary.summary,
+					// 	dueDate: parsedContent.summary.dueDate,
+					// 	pdfContent: parsedContent.pdfContent,
+					// 	complianceMatrix: parsedContent.complianceMatrix,
+					// });
 
 					setDocumentType(contentType);
 				}
