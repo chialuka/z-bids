@@ -9,7 +9,12 @@ import {
 } from "@heroui/react";
 import { RfpData } from "@/server/modules/openai/generateCoverSheet";
 import SearchBar from "./SearchBar";
-import { convertJsonToMarkdown, convertToExcel, convertMarkdownTableToExcel } from "@/lib/utils";
+import {
+	convertJsonToMarkdown,
+	convertToExcel,
+	convertMarkdownTableToExcel,
+	convertFeasibilityDataToExcel,
+} from "@/lib/utils";
 
 // Define types for feasibility check data
 interface FeasibilityItem {
@@ -21,14 +26,18 @@ interface FeasibilityItem {
 	citations: string;
 }
 
-type FeasibilityData  = FeasibilityItem[];
+type FeasibilityData = FeasibilityItem[];
 
 interface FileViewerProps {
 	isOpen: boolean;
 	onClose: () => void;
 	fileName: string;
 	documentContent: string;
-	documentType: "coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck";
+	documentType:
+		| "coverSheet"
+		| "pdfContent"
+		| "complianceMatrix"
+		| "feasibilityCheck";
 }
 
 export default function FileViewer({
@@ -46,12 +55,13 @@ export default function FileViewer({
 		if (documentContent && documentType === "coverSheet") {
 			try {
 				// Parse the JSON data for structured rendering
-				const data = typeof documentContent === "string" 
-					? JSON.parse(documentContent) 
-					: documentContent;
-				
+				const data =
+					typeof documentContent === "string"
+						? JSON.parse(documentContent)
+						: documentContent;
+
 				setJsonData(data);
-				
+
 				// Also keep markdown version for download
 				let markdown = "";
 				try {
@@ -84,41 +94,52 @@ export default function FileViewer({
 
 		setDownloadLoading(true);
 		try {
-			// Different download behavior based on documentType
-			if (documentType === "coverSheet") {
-				// Create Excel file for cover sheet
-				const excelData = await convertToExcel(documentContent);
-				
+			if (documentType === "complianceMatrix") {
+				// Create Excel file for compliance matrix using dedicated converter
+				const excelData = await convertMarkdownTableToExcel(documentContent);
+
 				// Create and download the Excel file
-				const blob = new Blob([excelData], { 
-					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+				const blob = new Blob([excelData], {
+					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 				});
 				const link = document.createElement("a");
 				link.href = URL.createObjectURL(blob);
-				link.download = `${fileName.replace(/\.[^/.]+$/, "")}_cover_sheet.xlsx`;
+				link.download = `${fileName.replace(
+					/\.[^/.]+$/,
+					""
+				)}_compliance_matrix.xlsx`;
 				document.body.appendChild(link);
 				link.click();
 				document.body.removeChild(link);
-			} else if (documentType === "complianceMatrix") {
-				// Create Excel file for compliance matrix using dedicated converter
-				const excelData = await convertMarkdownTableToExcel(documentContent);
+			} else if (documentType === "feasibilityCheck") {
+				// Use specialized converter for feasibility check data
+				const excelData = await convertFeasibilityDataToExcel(documentContent);
 				
 				// Create and download the Excel file
 				const blob = new Blob([excelData], { 
-					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 				});
 				const link = document.createElement("a");
 				link.href = URL.createObjectURL(blob);
-				link.download = `${fileName.replace(/\.[^/.]+$/, "")}_compliance_matrix.xlsx`;
+				link.download = `${fileName.replace(/\.[^/.]+$/, "")}_feasibility_check.xlsx`;
 				document.body.appendChild(link);
 				link.click();
 				document.body.removeChild(link);
 			} else {
-				// For other document types, download as CSV
-				const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+				// For coverSheet and other document types (pdfContent)
+				const contentToConvert = documentType === "coverSheet" ? documentContent : content;
+				const excelData = await convertToExcel(contentToConvert);
+				
+				// Add suffix for cover sheet
+				const suffix = documentType === "coverSheet" ? "_cover_sheet" : "";
+				
+				// Create and download the Excel file
+				const blob = new Blob([excelData], { 
+					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				});
 				const link = document.createElement("a");
 				link.href = URL.createObjectURL(blob);
-				link.download = `${fileName.replace(/\.[^/.]+$/, "")}.csv`;
+				link.download = `${fileName.replace(/\.[^/.]+$/, "")}${suffix}.xlsx`;
 				document.body.appendChild(link);
 				link.click();
 				document.body.removeChild(link);
@@ -132,24 +153,24 @@ export default function FileViewer({
 
 	// Format text to highlight labels
 	const formatValueWithLabels = (text: string): React.ReactNode | string => {
-		if (!text || typeof text !== 'string') return text;
-		
+		if (!text || typeof text !== "string") return text;
+
 		// Split by labels ("Label: Value" pattern)
-		if (text.includes(': ')) {
+		if (text.includes(": ")) {
 			const parts = text.split(/(?<=^|;\s*)([^:;]+):\s*/g).filter(Boolean);
-			
+
 			if (parts.length <= 1) return text;
-			
+
 			return (
 				<div className="space-y-1">
 					{parts.map((part, index) => {
 						// Skip the parts that are values (every even-indexed item)
 						if (index % 2 === 1) return null;
-						
+
 						// Get the corresponding value (if exists)
-						const value = parts[index + 1] || '';
+						const value = parts[index + 1] || "";
 						const label = part.trim();
-						
+
 						// If this is a valid label-value pair
 						if (label && index + 1 < parts.length) {
 							return (
@@ -159,14 +180,14 @@ export default function FileViewer({
 								</div>
 							);
 						}
-						
+
 						// Just output the text if not a label-value pair
 						return <span key={index}>{part}</span>;
 					})}
 				</div>
 			);
 		}
-		
+
 		return text;
 	};
 
@@ -181,37 +202,49 @@ export default function FileViewer({
 						{Object.entries(jsonData).map(([section, content]) => {
 							// Format the section name nicely
 							const formattedSectionName = section
-								.replace(/([A-Z])/g, ' $1')
-								.replace(/^./, str => str.toUpperCase());
-							
+								.replace(/([A-Z])/g, " $1")
+								.replace(/^./, (str) => str.toUpperCase());
+
 							// Generate rows for this section
 							const rows = [];
-							
+
 							// Add section header
 							rows.push(
 								<tr key={`section-${section}`}>
-									<td 
-										colSpan={2} 
+									<td
+										colSpan={2}
 										className="bg-blue-50 p-3 font-bold text-blue-700"
 									>
 										{formattedSectionName.toUpperCase()}
 									</td>
 								</tr>
 							);
-							
+
 							// Add the fields and values
 							Object.entries(content).forEach(([key, value]) => {
 								// Handle empty values
 								const displayValue = value || "N/A";
-								
+
 								// Check if value contains semicolons (potential list)
-								if (typeof displayValue === 'string' && displayValue.includes(';')) {
-									const items = displayValue.split(';').map(item => item.trim()).filter(Boolean);
-									
+								if (
+									typeof displayValue === "string" &&
+									displayValue.includes(";")
+								) {
+									const items = displayValue
+										.split(";")
+										.map((item) => item.trim())
+										.filter(Boolean);
+
 									// First item with label
 									rows.push(
-										<tr key={`${section}-${key}`} className="border-b border-gray-200">
-											<td className="p-4 border border-gray-300 font-medium text-gray-900 align-top" rowSpan={items.length}>
+										<tr
+											key={`${section}-${key}`}
+											className="border-b border-gray-200"
+										>
+											<td
+												className="p-4 border border-gray-300 font-medium text-gray-900 align-top"
+												rowSpan={items.length}
+											>
 												{key}
 											</td>
 											<td className="p-4 border border-gray-300 text-gray-700">
@@ -219,11 +252,14 @@ export default function FileViewer({
 											</td>
 										</tr>
 									);
-									
+
 									// Subsequent items without label (using a slightly different style)
 									items.slice(1).forEach((item, index) => {
 										rows.push(
-											<tr key={`${section}-${key}-${index}`} className="border-b border-gray-200 bg-white">
+											<tr
+												key={`${section}-${key}-${index}`}
+												className="border-b border-gray-200 bg-white"
+											>
 												<td className="p-4 border border-gray-300 text-gray-700 border-t-0">
 													{formatValueWithLabels(item)}
 												</td>
@@ -233,7 +269,10 @@ export default function FileViewer({
 								} else {
 									// Regular single-value field
 									rows.push(
-										<tr key={`${section}-${key}`} className="border-b border-gray-200">
+										<tr
+											key={`${section}-${key}`}
+											className="border-b border-gray-200"
+										>
 											<td className="p-4 border border-gray-300 font-medium text-gray-900 w-1/3">
 												{key}
 											</td>
@@ -244,14 +283,17 @@ export default function FileViewer({
 									);
 								}
 							});
-							
+
 							// Add an empty row after each section
 							rows.push(
-								<tr key={`section-${section}-spacer`} className="h-4 bg-gray-50/30">
+								<tr
+									key={`section-${section}-spacer`}
+									className="h-4 bg-gray-50/30"
+								>
 									<td colSpan={2} className="p-1"></td>
 								</tr>
 							);
-							
+
 							return rows;
 						})}
 					</tbody>
@@ -267,23 +309,32 @@ export default function FileViewer({
 		// Format the summary nicely
 		const formattedSummary = summaryText
 			// Remove hash symbols and "Summary" text
-			.replace(/^#\s*(Final Vendor Requirements Table)\s*#{1,2}\s*(Summary)?(Information)?/i, '<h1 class="text-2xl font-bold mb-4">$1</h1>')
+			.replace(
+				/^#\s*(Final Vendor Requirements Table)\s*#{1,2}\s*(Summary)?(Information)?/i,
+				'<h1 class="text-2xl font-bold mb-4">$1</h1>'
+			)
 			// Format section titles
-			.replace(/#{1,2}\s*([^#\n]+)/g, '<h2 class="text-xl font-semibold my-3">$1</h2>')
+			.replace(
+				/#{1,2}\s*([^#\n]+)/g,
+				'<h2 class="text-xl font-semibold my-3">$1</h2>'
+			)
 			// Format bold text
-			.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+			.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
 			// Format bullet points with proper spacing and styling
 			.replace(/• (.*?)(\n• |$)/g, '<li class="mb-2">$1</li>')
 			.replace(/\n- (.*?)(\n- |\n\n|$)/g, '<li class="mb-2">$1</li>')
 			// Format numbers to be bold
-			.replace(/(\d+)(\s+requirements|\s+requirement)/g, '<span class="font-semibold">$1</span>$2')
+			.replace(
+				/(\d+)(\s+requirements|\s+requirement)/g,
+				'<span class="font-semibold">$1</span>$2'
+			)
 			// Wrap lists in proper list elements
-			.replace(/<li class="mb-2">(.*?)<\/li>/g, function(match) {
-				return '<ul class="list-disc pl-5 space-y-2 my-3">' + match + '</ul>';
+			.replace(/<li class="mb-2">(.*?)<\/li>/g, function (match) {
+				return '<ul class="list-disc pl-5 space-y-2 my-3">' + match + "</ul>";
 			})
 			// Remove duplicate lists
-			.replace(/<\/ul>\s*<ul class="list-disc pl-5 space-y-2 my-3">/g, '');
-			
+			.replace(/<\/ul>\s*<ul class="list-disc pl-5 space-y-2 my-3">/g, "");
+
 		return (
 			<div className="compliance-summary mb-8 leading-relaxed bg-white rounded-lg p-5 shadow-sm">
 				<div dangerouslySetInnerHTML={{ __html: formattedSummary }} />
@@ -306,9 +357,7 @@ export default function FileViewer({
 				</ModalHeader>
 				<ModalBody className="flex gap-4 overflow-x-hidden pb-40">
 					{documentType === "coverSheet" && (
-						<div className="w-full">
-							{renderCoverSheetTable()}
-						</div>
+						<div className="w-full">{renderCoverSheetTable()}</div>
 					)}
 					{documentType === "pdfContent" && (
 						<div className="w-full text-gray-800 overflow-x-auto">
@@ -321,53 +370,74 @@ export default function FileViewer({
 								{(() => {
 									try {
 										// First, check if this is a properly formatted markdown table with newlines
-										if (documentContent && 
-											(documentContent.includes("\n| Page | Section |") || 
-											 documentContent.includes("\n|------|") || 
-											 documentContent.includes("\n| --- | --- |"))) {
-											
+										if (
+											documentContent &&
+											(documentContent.includes("\n| Page | Section |") ||
+												documentContent.includes("\n|------|") ||
+												documentContent.includes("\n| --- | --- |"))
+										) {
 											// This is a proper markdown table with newlines
-											const parts = documentContent.split(/(?=\n\|[\s-]*Page[\s-]*\|)/i);
+											const parts = documentContent.split(
+												/(?=\n\|[\s-]*Page[\s-]*\|)/i
+											);
 											const summaryText = parts[0] || "";
-											
+
 											// Extract table data - find all rows that start with | and contain |
 											const tableRows = documentContent
-												.split('\n')
-												.filter(line => line.trim().startsWith('|') && line.includes('|'));
-											
+												.split("\n")
+												.filter(
+													(line) =>
+														line.trim().startsWith("|") && line.includes("|")
+												);
+
 											if (tableRows.length < 3) {
-												return <div dangerouslySetInnerHTML={{ __html: documentContent }} />;
+												return (
+													<div
+														dangerouslySetInnerHTML={{
+															__html: documentContent,
+														}}
+													/>
+												);
 											}
-											
+
 											// Parse header and data rows
 											const headerRow = tableRows[0];
 											// const separatorRow = tableRows[1]; // Row with |---|---|--- pattern - not needed for rendering
 											const dataRows = tableRows.slice(2); // Skip header and separator rows
-											
+
 											// Extract headers
-											const headers = headerRow.split('|')
-												.filter(cell => cell.trim())
-												.map(cell => cell.trim());
-											
+											const headers = headerRow
+												.split("|")
+												.filter((cell) => cell.trim())
+												.map((cell) => cell.trim());
+
 											return (
 												<>
 													{renderComplianceMatrixSummary(summaryText)}
-													
-													<h2 className="text-xl font-semibold mb-4 text-gray-800">Comprehensive Vendor Requirements Table</h2>
-													
+
+													<h2 className="text-xl font-semibold mb-4 text-gray-800">
+														Comprehensive Vendor Requirements Table
+													</h2>
+
 													<div className="overflow-x-auto mb-8 rounded-lg shadow">
 														<table className="w-full border-collapse border-spacing-0 text-sm">
 															<thead>
 																<tr>
 																	{headers.map((header, index) => (
-																		<th 
+																		<th
 																			key={index}
 																			className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0"
 																			style={{
-																				width: index === 0 ? '5%' : 
-																					  index === 1 ? '15%' : 
-																					  index === 2 ? '30%' :
-																					  index === 6 ? '20%' : 'auto'
+																				width:
+																					index === 0
+																						? "5%"
+																						: index === 1
+																						? "15%"
+																						: index === 2
+																						? "30%"
+																						: index === 6
+																						? "20%"
+																						: "auto",
 																			}}
 																		>
 																			{header}
@@ -376,52 +446,72 @@ export default function FileViewer({
 																</tr>
 															</thead>
 															<tbody>
-																{dataRows.map((row, rowIndex) => {
-																	const cells = row.split('|')
-																		.map(cell => cell.trim())
-																		.filter((cell, index) => index > 0); // Skip the first empty cell before the first |
-																	
-																	// Skip rows that don't have enough cells
-																	if (cells.length < 3) return null;
-																	
-																	return (
-																		<tr 
-																			key={rowIndex} 
-																			className={`${rowIndex % 2 === 1 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}
-																		>
-																			{cells.map((cell, cellIndex) => {
-																				// Special styling for Human Review Flag column (should be the last column)
-																				const isYesReview = cellIndex === headers.length - 1 && 
-																					   (cell.startsWith('Yes') || cell.includes('Yes -'));
-																				
-																				return (
-																					<td 
-																						key={cellIndex} 
-																						className={`p-3 border-b border-gray-200 align-top ${isYesReview ? 'text-red-700 font-medium' : ''}`}
-																					>
-																						{cell}
-																					</td>
-																				);
-																			})}
-																		</tr>
-																	);
-																}).filter(Boolean)}
+																{dataRows
+																	.map((row, rowIndex) => {
+																		const cells = row
+																			.split("|")
+																			.map((cell) => cell.trim())
+																			.filter((cell, index) => index > 0); // Skip the first empty cell before the first |
+
+																		// Skip rows that don't have enough cells
+																		if (cells.length < 3) return null;
+
+																		return (
+																			<tr
+																				key={rowIndex}
+																				className={`${
+																					rowIndex % 2 === 1
+																						? "bg-gray-50"
+																						: "bg-white"
+																				} hover:bg-gray-100`}
+																			>
+																				{cells.map((cell, cellIndex) => {
+																					// Special styling for Human Review Flag column (should be the last column)
+																					const isYesReview =
+																						cellIndex === headers.length - 1 &&
+																						(cell.startsWith("Yes") ||
+																							cell.includes("Yes -"));
+
+																					return (
+																						<td
+																							key={cellIndex}
+																							className={`p-3 border-b border-gray-200 align-top ${
+																								isYesReview
+																									? "text-red-700 font-medium"
+																									: ""
+																							}`}
+																						>
+																							{cell}
+																						</td>
+																					);
+																				})}
+																			</tr>
+																		);
+																	})
+																	.filter(Boolean)}
 															</tbody>
 														</table>
 													</div>
 												</>
 											);
 										}
-										
+
 										// Special case for the one-line format with pipe characters
-										if (documentContent && documentContent.includes("|") && !documentContent.includes("\n|")) {
+										if (
+											documentContent &&
+											documentContent.includes("|") &&
+											!documentContent.includes("\n|")
+										) {
 											// Extract the summary (everything before the first pipe sequence)
-											const parts = documentContent.split(/(?=\|\s*Page\s*\|)/i);
+											const parts =
+												documentContent.split(/(?=\|\s*Page\s*\|)/i);
 											const summaryText = parts[0] || "";
-											
+
 											// Try to find table headers
-											const headerMatch = documentContent.match(/\|\s*Page\s*\|\s*Section\s*\|\s*Requirement Text\s*\|\s*Obligation Verb\s*\|\s*Obligation Level\s*\|\s*Cross-References\s*\|\s*Human Review Flag\s*\|/i);
-											
+											const headerMatch = documentContent.match(
+												/\|\s*Page\s*\|\s*Section\s*\|\s*Requirement Text\s*\|\s*Obligation Verb\s*\|\s*Obligation Level\s*\|\s*Cross-References\s*\|\s*Human Review Flag\s*\|/i
+											);
+
 											if (!headerMatch) {
 												// No standard headers found, just render as-is with nice formatting
 												return (
@@ -433,16 +523,19 @@ export default function FileViewer({
 													</>
 												);
 											}
-											
+
 											// Regular expression to find each row
 											// Looking for patterns like | number | text | text | text | text | text | text |
-											const rowRegex = /\|\s*(\d+(?:\.\d+)?)\s*\|\s*([^|]+)\s*\|\s*("[^"]+"|\S[^|]*)\s*\|\s*(\S+)\s*\|\s*(\S+)\s*\|\s*([^|]*)\s*\|\s*([^|]*)\s*\|/g;
-											
+											const rowRegex =
+												/\|\s*(\d+(?:\.\d+)?)\s*\|\s*([^|]+)\s*\|\s*("[^"]+"|\S[^|]*)\s*\|\s*(\S+)\s*\|\s*(\S+)\s*\|\s*([^|]*)\s*\|\s*([^|]*)\s*\|/g;
+
 											const matches = [];
 											let match;
-											
+
 											// Find all matches in the content
-											while ((match = rowRegex.exec(documentContent)) !== null) {
+											while (
+												(match = rowRegex.exec(documentContent)) !== null
+											) {
 												matches.push({
 													page: match[1].trim(),
 													section: match[2].trim(),
@@ -450,67 +543,101 @@ export default function FileViewer({
 													verb: match[4].trim(),
 													level: match[5].trim(),
 													references: match[6].trim(),
-													reviewFlag: match[7].trim()
+													reviewFlag: match[7].trim(),
 												});
 											}
-											
+
 											// If the regex didn't find anything, fall back to a simpler approach
 											if (matches.length === 0) {
 												// For the one-line format fallback approach
 												const allCells = documentContent
-													.split('|')
-													.map(cell => cell.trim())
-													.filter((cell, index) => index > 0 && cell && !cell.includes('-----')); // Skip the first empty cell and filter out separators
-												
+													.split("|")
+													.map((cell) => cell.trim())
+													.filter(
+														(cell, index) =>
+															index > 0 && cell && !cell.includes("-----")
+													); // Skip the first empty cell and filter out separators
+
 												// Find where the table starts - look for "Page"
-												let tableStartIndex = allCells.findIndex(cell => 
-													cell.toLowerCase() === 'page' || 
-													cell.match(/^page$/i)
+												let tableStartIndex = allCells.findIndex(
+													(cell) =>
+														cell.toLowerCase() === "page" ||
+														cell.match(/^page$/i)
 												);
 
 												if (tableStartIndex === -1) tableStartIndex = 0;
 
 												// Group the remaining cells into rows
 												const tableRows: string[][] = [];
-												for (let i = tableStartIndex + 7; i < allCells.length; i += 7) {
+												for (
+													let i = tableStartIndex + 7;
+													i < allCells.length;
+													i += 7
+												) {
 													if (i + 7 <= allCells.length) {
 														tableRows.push(allCells.slice(i, i + 7));
 													}
 												}
-												
+
 												return (
 													<>
 														{renderComplianceMatrixSummary(summaryText)}
-														
-														<h2 className="text-xl font-semibold mb-4 text-gray-800">Consolidated Vendor Requirements Table</h2>
-														
+
+														<h2 className="text-xl font-semibold mb-4 text-gray-800">
+															Consolidated Vendor Requirements Table
+														</h2>
+
 														<div className="overflow-x-auto mb-8 rounded-lg shadow">
 															<table className="w-full border-collapse border-spacing-0 text-sm">
 																<thead>
 																	<tr>
-																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[5%]">Page</th>
-																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[15%]">Section</th>
-																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[30%]">Requirement Text</th>
-																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">Obligation Verb</th>
-																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">Obligation Level</th>
-																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">Cross-References</th>
-																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[20%]">Human Review Flag</th>
+																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[5%]">
+																			Page
+																		</th>
+																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[15%]">
+																			Section
+																		</th>
+																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[30%]">
+																			Requirement Text
+																		</th>
+																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">
+																			Obligation Verb
+																		</th>
+																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">
+																			Obligation Level
+																		</th>
+																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">
+																			Cross-References
+																		</th>
+																		<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[20%]">
+																			Human Review Flag
+																		</th>
 																	</tr>
 																</thead>
 																<tbody>
 																	{tableRows.map((row, rowIndex) => (
-																		<tr 
-																			key={rowIndex} 
-																			className={`${rowIndex % 2 === 1 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}
+																		<tr
+																			key={rowIndex}
+																			className={`${
+																				rowIndex % 2 === 1
+																					? "bg-gray-50"
+																					: "bg-white"
+																			} hover:bg-gray-100`}
 																		>
 																			{row.map((cell, cellIndex) => {
 																				// Special styling for Human Review Flag column
-																				const isYesReview = cellIndex === 6 && cell.includes("Yes");
-																				
+																				const isYesReview =
+																					cellIndex === 6 &&
+																					cell.includes("Yes");
+
 																				return (
-																					<td 
-																						key={cellIndex} 
-																						className={`p-3 border-b border-gray-200 align-top ${isYesReview ? 'text-red-700 font-medium' : ''}`}
+																					<td
+																						key={cellIndex}
+																						className={`p-3 border-b border-gray-200 align-top ${
+																							isYesReview
+																								? "text-red-700 font-medium"
+																								: ""
+																						}`}
 																					>
 																						{cell}
 																					</td>
@@ -524,40 +651,80 @@ export default function FileViewer({
 													</>
 												);
 											}
-											
+
 											// Use the regex matches to render a proper table
 											return (
 												<>
 													{renderComplianceMatrixSummary(summaryText)}
-													
-													<h2 className="text-xl font-semibold mb-4 text-gray-800">Consolidated Vendor Requirements Table</h2>
-													
+
+													<h2 className="text-xl font-semibold mb-4 text-gray-800">
+														Consolidated Vendor Requirements Table
+													</h2>
+
 													<div className="overflow-x-auto mb-8 rounded-lg shadow">
 														<table className="w-full border-collapse border-spacing-0 text-sm">
 															<thead>
 																<tr>
-																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[5%]">Page</th>
-																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[15%]">Section</th>
-																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[30%]">Requirement Text</th>
-																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">Obligation Verb</th>
-																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">Obligation Level</th>
-																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">Cross-References</th>
-																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[20%]">Human Review Flag</th>
+																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[5%]">
+																		Page
+																	</th>
+																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[15%]">
+																		Section
+																	</th>
+																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[30%]">
+																		Requirement Text
+																	</th>
+																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">
+																		Obligation Verb
+																	</th>
+																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">
+																		Obligation Level
+																	</th>
+																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0">
+																		Cross-References
+																	</th>
+																	<th className="bg-gray-100 text-gray-800 font-semibold text-left p-3 border-b border-gray-200 sticky top-0 w-[20%]">
+																		Human Review Flag
+																	</th>
 																</tr>
 															</thead>
 															<tbody>
 																{matches.map((row, rowIndex) => (
-																	<tr 
-																		key={rowIndex} 
-																		className={`${rowIndex % 2 === 1 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}
+																	<tr
+																		key={rowIndex}
+																		className={`${
+																			rowIndex % 2 === 1
+																				? "bg-gray-50"
+																				: "bg-white"
+																		} hover:bg-gray-100`}
 																	>
-																		<td className="p-3 border-b border-gray-200 align-top">{row.page}</td>
-																		<td className="p-3 border-b border-gray-200 align-top">{row.section}</td>
-																		<td className="p-3 border-b border-gray-200 align-top">{row.requirement}</td>
-																		<td className="p-3 border-b border-gray-200 align-top">{row.verb}</td>
-																		<td className="p-3 border-b border-gray-200 align-top">{row.level}</td>
-																		<td className="p-3 border-b border-gray-200 align-top">{row.references}</td>
-																		<td className={`p-3 border-b border-gray-200 align-top ${row.reviewFlag.includes("Yes") ? 'text-red-700 font-medium' : ''}`}>{row.reviewFlag}</td>
+																		<td className="p-3 border-b border-gray-200 align-top">
+																			{row.page}
+																		</td>
+																		<td className="p-3 border-b border-gray-200 align-top">
+																			{row.section}
+																		</td>
+																		<td className="p-3 border-b border-gray-200 align-top">
+																			{row.requirement}
+																		</td>
+																		<td className="p-3 border-b border-gray-200 align-top">
+																			{row.verb}
+																		</td>
+																		<td className="p-3 border-b border-gray-200 align-top">
+																			{row.level}
+																		</td>
+																		<td className="p-3 border-b border-gray-200 align-top">
+																			{row.references}
+																		</td>
+																		<td
+																			className={`p-3 border-b border-gray-200 align-top ${
+																				row.reviewFlag.includes("Yes")
+																					? "text-red-700 font-medium"
+																					: ""
+																			}`}
+																		>
+																			{row.reviewFlag}
+																		</td>
 																	</tr>
 																))}
 															</tbody>
@@ -566,7 +733,7 @@ export default function FileViewer({
 												</>
 											);
 										}
-										
+
 										// If none of our specialized parsers worked, fall back to default rendering
 										return (
 											<div className="whitespace-pre-wrap p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -589,16 +756,21 @@ export default function FileViewer({
 					{documentType === "feasibilityCheck" && (
 						<div className="w-full overflow-x-auto">
 							<div className="p-4 bg-blue-50 rounded mb-4">
-								<h3 className="text-lg font-semibold text-blue-900 mb-2">Feasibility Analysis Results</h3>
-								<p className="text-blue-800 mb-2">The following analysis shows how well this RFP matches your organization&apos;s capabilities.</p>
+								<h3 className="text-lg font-semibold text-blue-900 mb-2">
+									Feasibility Analysis Results
+								</h3>
+								<p className="text-blue-800 mb-2">
+									The following analysis shows how well this RFP matches your
+									organization&apos;s capabilities.
+								</p>
 							</div>
 							<div className="px-4">
 								{(() => {
 									try {
-                    console.log("the document content", typeof documentContent);
+										console.log("the document content", typeof documentContent);
 										// Parse the JSON data
 										const data = JSON.parse(documentContent) as FeasibilityData;
-										
+
 										if (!data || !Array.isArray(data)) {
 											return (
 												<div className="p-4 text-red-500">
@@ -606,33 +778,60 @@ export default function FileViewer({
 												</div>
 											);
 										}
-										
+
 										return (
 											<table className="w-full border-collapse">
 												<thead>
 													<tr className="bg-gray-100">
-														<th className="border border-gray-300 p-2 text-left">Req #</th>
-														<th className="border border-gray-300 p-2 text-left">Section</th>
-														<th className="border border-gray-300 p-2 text-left">Requirement</th>
-														<th className="border border-gray-300 p-2 text-left">Feasible</th>
-														<th className="border border-gray-300 p-2 text-left">Reason</th>
-														<th className="border border-gray-300 p-2 text-left">Citations</th>
+														<th className="border border-gray-300 p-2 text-left">
+															Req #
+														</th>
+														<th className="border border-gray-300 p-2 text-left">
+															Section
+														</th>
+														<th className="border border-gray-300 p-2 text-left">
+															Requirement
+														</th>
+														<th className="border border-gray-300 p-2 text-left">
+															Feasible
+														</th>
+														<th className="border border-gray-300 p-2 text-left">
+															Reason
+														</th>
+														<th className="border border-gray-300 p-2 text-left">
+															Citations
+														</th>
 													</tr>
 												</thead>
 												<tbody>
 													{data.map((item: FeasibilityItem) => (
 														<tr key={item.req_no}>
-															<td className="border border-gray-300 p-2">{item.req_no}</td>
-															<td className="border border-gray-300 p-2">{item.section}</td>
-															<td className="border border-gray-300 p-2">{item.requirement}</td>
-															<td className={`border border-gray-300 p-2 ${
-																item.feasible === "Yes" ? "bg-green-100" :
-																item.feasible === "No" ? "bg-red-100" : "bg-yellow-100"
-															}`}>
+															<td className="border border-gray-300 p-2">
+																{item.req_no}
+															</td>
+															<td className="border border-gray-300 p-2">
+																{item.section}
+															</td>
+															<td className="border border-gray-300 p-2">
+																{item.requirement}
+															</td>
+															<td
+																className={`border border-gray-300 p-2 ${
+																	item.feasible === "Yes"
+																		? "bg-green-100"
+																		: item.feasible === "No"
+																		? "bg-red-100"
+																		: "bg-yellow-100"
+																}`}
+															>
 																{item.feasible}
 															</td>
-															<td className="border border-gray-300 p-2">{item.reason}</td>
-															<td className="border border-gray-300 p-2">{item.citations || "-"}</td>
+															<td className="border border-gray-300 p-2">
+																{item.reason}
+															</td>
+															<td className="border border-gray-300 p-2">
+																{item.citations || "-"}
+															</td>
 														</tr>
 													))}
 												</tbody>
@@ -641,7 +840,8 @@ export default function FileViewer({
 									} catch (e) {
 										return (
 											<div className="p-4 text-red-500">
-												Error parsing feasibility data: {e instanceof Error ? e.message : String(e)}
+												Error parsing feasibility data:{" "}
+												{e instanceof Error ? e.message : String(e)}
 											</div>
 										);
 									}
@@ -662,7 +862,11 @@ export default function FileViewer({
 							className="font-semibold"
 							isLoading={downloadLoading}
 						>
-							{downloadLoading ? "Generating..." : (documentType === "coverSheet" ? "Download as Excel" : "Download Document")}
+							{downloadLoading
+								? "Generating..."
+								: documentType === "coverSheet"
+								? "Download as Excel"
+								: "Download Document"}
 						</Button>
 					</div>
 					<Button color="danger" variant="light" onPress={onClose}>

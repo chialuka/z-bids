@@ -287,3 +287,88 @@ export const convertMarkdownTableToExcel = async (markdownString: string): Promi
 		throw error;
 	}
 };
+
+// Converts feasibility check data to Excel format
+export const convertFeasibilityDataToExcel = async (jsonString: string): Promise<Uint8Array> => {
+	try {
+		// Parse the JSON data (feasibility data is an array of items)
+		const data = JSON.parse(jsonString);
+		
+		if (!Array.isArray(data)) {
+			throw new Error("Feasibility data is not in the expected format");
+		}
+		
+		// Initialize XLSX workbook
+		const wb = XLSX.utils.book_new();
+		
+		// Create header row
+		const headers = ["Req #", "Section", "Requirement", "Feasible", "Reason", "Citations"];
+		
+		// Create data rows
+		const rows = [headers];
+		
+		// Add data rows
+		data.forEach(item => {
+			rows.push([
+				item.req_no,
+				item.section,
+				item.requirement,
+				item.feasible,
+				item.reason,
+				item.citations || "-"
+			]);
+		});
+		
+		// Create worksheet
+		const ws = XLSX.utils.aoa_to_sheet(rows);
+		
+		// Set column widths
+		ws['!cols'] = [
+			{ wch: 8 },   // Req #
+			{ wch: 15 },  // Section
+			{ wch: 50 },  // Requirement
+			{ wch: 12 },  // Feasible
+			{ wch: 40 },  // Reason
+			{ wch: 40 }   // Citations
+		];
+		
+		// Format header row
+		const headerRange = XLSX.utils.decode_range(ws['!ref'] || "A1");
+		for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+			const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
+			if (!ws[headerCell]) continue;
+			
+			ws[headerCell].s = {
+				font: { bold: true, color: { rgb: "FFFFFF" } },
+				fill: { fgColor: { rgb: "4F81BD" } }
+			};
+		}
+		
+		// Add conditional formatting for Feasible column
+		for (let R = 1; R <= data.length; ++R) {
+			const feasibleCell = XLSX.utils.encode_cell({ r: R, c: 3 });
+			if (!ws[feasibleCell]) continue;
+			
+			const feasibleValue = ws[feasibleCell].v;
+			
+			// Apply color based on value
+			if (feasibleValue === "Yes") {
+				ws[feasibleCell].s = { fill: { fgColor: { rgb: "C6EFCE" } } };
+			} else if (feasibleValue === "No") {
+				ws[feasibleCell].s = { fill: { fgColor: { rgb: "FFC7CE" } } };
+			} else {
+				ws[feasibleCell].s = { fill: { fgColor: { rgb: "FFEB9C" } } };
+			}
+		}
+		
+		// Add the sheet to workbook
+		XLSX.utils.book_append_sheet(wb, ws, "Feasibility Assessment");
+		
+		// Write the workbook to buffer and return
+		const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+		return new Uint8Array(excelBuffer);
+	} catch (error) {
+		console.error('Error converting feasibility data to Excel:', error);
+		throw error;
+	}
+};
