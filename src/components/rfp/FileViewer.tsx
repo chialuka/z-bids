@@ -40,7 +40,6 @@ interface FileViewerProps {
 		| "complianceMatrix"
 		| "feasibilityCheck";
 	onRegenerate?: (params: {
-		document: string;
 		documentId: number;
 		documentType:
 			| "coverSheet"
@@ -169,7 +168,7 @@ export default function FileViewer({
 		setRegenerateLoading(true);
 		try {
       if (documentType !== "pdfContent") {
-        await onRegenerate({ document: documentContent, documentType, documentId });
+        await onRegenerate({ documentType, documentId });
       }
 		} catch (error) {
 			console.error("Error regenerating document:", error);

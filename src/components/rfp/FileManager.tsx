@@ -19,11 +19,10 @@ import {
 } from "@heroui/react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import {
-	fetchAllDocuments,
-	// parseExternalFile,
-	// saveDocument,
-} from "@/services/document";
+import // fetchAllDocuments,
+// parseExternalFile,
+// saveDocument,
+"@/services/document";
 import { OpenFolderIcon } from "../icons/OpenFolderIcon";
 import { ClosedFolderIcon } from "../icons/ClosedFolderIcon";
 interface FileManagerProps {
@@ -47,7 +46,7 @@ export default function RFPFiles({
 	const [documentType, setDocumentType] = useState<
 		"coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
 	>("coverSheet");
-  const [documentId, setDocumentId] = useState<number>(0);
+	const [documentId, setDocumentId] = useState<number>(0);
 	const [processingStatus, setProcessingStatus] = useState<{
 		isProcessing: boolean;
 		isComplete: boolean;
@@ -66,62 +65,69 @@ export default function RFPFiles({
 	const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
-	const fetcherFunctions = useMemo(() => ({
-		coverSheet: async ({
-			content,
-			documentId,
-		}: {
-			content: string;
-			documentId: number;
-		}) => {
-			const res = await fetch("/api/cover-sheet", {
-				method: "POST",
-				body: JSON.stringify({
-					document: content,
-					documentId: documentId,
-				}),
-			});
-			const data = await res.json();
-			return data.coverSheet;
-		},
-		complianceMatrix: async ({
-			content,
-			documentId,
-		}: {
-			content: string;
-			documentId: number;
-		}) => {
-			const res = await fetch("/api/compliance-matrix", {
-				method: "POST",
-				body: JSON.stringify({
-					pdf_file_content: content,
-					document_id: documentId,
-				}),
-			});
-			const data = await res.json();
-			return data.complianceMatrix;
-		},
-		feasibilityCheck: async ({
-			content,
-			documentId,
-		}: {
-			content: string;
-			documentId: number;
-		}) => {
-			const res = await fetch("/api/feasibility", {
-				method: "POST",
-				body: JSON.stringify({
-					content: content,
-					document_id: documentId,
-				}),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-			const data = await res.json();
-			return data.result;
-		},
-	}), []);
+	const fetcherFunctions = useMemo(
+		() => ({
+			coverSheet: async ({
+				content,
+				documentId,
+			}: {
+				content: string;
+				documentId: number;
+			}) => {
+				const res = await fetch("/api/cover-sheet", {
+					method: "POST",
+					body: JSON.stringify({
+						document: content,
+						documentId: documentId,
+					}),
+				});
+				const data = await res.json();
+				return data.coverSheet;
+			},
+			complianceMatrix: async ({
+				content,
+				documentId,
+			}: {
+				content: string;
+				documentId: number;
+			}) => {
+				const res = await fetch("/api/compliance-matrix", {
+					method: "POST",
+					body: JSON.stringify({
+						pdf_file_content: content,
+						document_id: documentId,
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				});
+				const data = await res.json();
+				console.log("data", data);
+				return data.complianceMatrix;
+			},
+			feasibilityCheck: async ({
+				content,
+				documentId,
+			}: {
+				content: string;
+				documentId: number;
+			}) => {
+				const res = await fetch("/api/feasibility", {
+					method: "POST",
+					body: JSON.stringify({
+						content: content,
+						document_id: documentId,
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				});
+				const data = await res.json();
+				return data.result;
+			},
+		}),
+		[]
+	);
 
 	// Auto-hide success message after 3 seconds
 	useEffect(() => {
@@ -309,8 +315,8 @@ export default function RFPFiles({
 
 			try {
 				// First ensure we have the latest documents
-				const fetchedDocs = await fetchAllDocuments();
-				const documents = fetchedDocs as unknown as Document[];
+				// const fetchedDocs = await fetchAllDocuments();
+				// const documents = fetchedDocs as unknown as Document[];
 
 				// Check if the document already exists in our database
 				const documentExists = documents.find(
@@ -333,7 +339,10 @@ export default function RFPFiles({
 							contentType === "feasibilityCheck")
 					) {
 						const data = await fetcherFunctions[contentType]({
-							content: contentType === "feasibilityCheck" ? documentExists.complianceMatrix : documentExists.pdfContent,
+							content:
+								contentType === "feasibilityCheck"
+									? documentExists.complianceMatrix
+									: documentExists.pdfContent,
 							documentId: documentExists.id,
 						});
 						value = JSON.stringify(data);
@@ -346,7 +355,6 @@ export default function RFPFiles({
 					// const parsedContent = await parseExternalFile(file.name);
 
 					// setShownContent(parsedContent.sanitizedContent);
-
 
 					// Save the document only once
 					// await saveDocument({
@@ -372,20 +380,28 @@ export default function RFPFiles({
 
 	const handleRegenerate = async ({
 		documentType,
-		document,
 		documentId,
 	}: {
 		documentType: "coverSheet" | "complianceMatrix" | "feasibilityCheck";
-		document: string;
 		documentId: number;
 	}) => {
 		try {
 			setIsLoading(true);
-			console.log("handleRegenerate called");
-			const data = await fetcherFunctions[documentType]({ content: document, documentId });
-			const value = JSON.stringify(data);
-			setShownContent(value);
-			setDocumentType(documentType);
+			const documentExists = documents.find(
+				(doc: Document) => doc.id === documentId
+			);
+			if (documentExists) {
+				const data = await fetcherFunctions[documentType]({
+					content:
+						documentType === "feasibilityCheck"
+							? documentExists.complianceMatrix
+							: documentExists.pdfContent,
+					documentId,
+				});
+				const value = JSON.stringify(data);
+				setShownContent(value);
+				setDocumentType(documentType);
+			}
 		} catch (error) {
 			console.error("Error regenerating document:", error);
 		} finally {

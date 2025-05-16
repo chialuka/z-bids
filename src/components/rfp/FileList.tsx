@@ -237,7 +237,7 @@ export default function FileList({
 	// Get files that don't belong to any folder
 	const filesWithoutFolder = files.filter(file => !file.folderId);
 	
-	console.log({ uniqueFolders, files });
+	console.log({ uniqueFolders });
 	useEffect(() => {
 		const fetchUploadThingFiles = async () => {
 			const response = await fetch("/api/uploadthing");
