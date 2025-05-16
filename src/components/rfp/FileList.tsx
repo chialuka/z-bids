@@ -468,7 +468,9 @@ export default function FileList({
 							<div className="space-y-4 pl-4">
 								{files
 									.filter((file: Document) => file.folderId === folder.id)
-									.map((file: Document) => (
+									.map((file: Document) => {
+                    console.log({ folder,file })
+                    return (
 										<DraggableFile key={`file-${file.id}-${folder.id}`} file={file}>
 											<div
 												className="border rounded-lg p-3 space-y-3 bg-white shadow-sm"
@@ -542,7 +544,7 @@ export default function FileList({
 												)}
 											</div>
 										</DraggableFile>
-									))}
+									)})}
 							</div>
 						</div>
 					</DroppableFolder>
