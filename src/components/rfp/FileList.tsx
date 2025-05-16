@@ -468,9 +468,7 @@ export default function FileList({
 							<div className="space-y-4 pl-4">
 								{files
 									.filter((file: Document) => file.folderId === folder.id)
-									.map((file: Document) => {
-                    console.log({ folder,file })
-                    return (
+									.map((file: Document) => (
 										<DraggableFile key={`file-${file.id}-${folder.id}`} file={file}>
 											<div
 												className="border rounded-lg p-3 space-y-3 bg-white shadow-sm"
@@ -544,7 +542,7 @@ export default function FileList({
 												)}
 											</div>
 										</DraggableFile>
-									)})}
+									))}
 							</div>
 						</div>
 					</DroppableFolder>
@@ -589,7 +587,9 @@ export default function FileList({
 										<TableBody>
 											{files
 												.filter((file: Document) => file.folderId === folder.id)
-												.map((file: Document) => (
+												.map((file: Document) => {
+                          console.log({ folder, file });
+                          return (
 													<TableRow key={file.id}>
 														<TableCell className="w-1/4">
 															<DraggableFile file={file}>
@@ -647,7 +647,7 @@ export default function FileList({
 																: "No due date"}
 														</TableCell>
 													</TableRow>
-												))}
+												)})}
 										</TableBody>
 									</Table>
 								</div>
