@@ -237,7 +237,7 @@ export default function FileList({
 	// Get files that don't belong to any folder
 	const filesWithoutFolder = files.filter(file => !file.folderId);
 	
-	console.log({ uniqueFolders });
+	console.log({ uniqueFolders, files });
 	useEffect(() => {
 		const fetchUploadThingFiles = async () => {
 			const response = await fetch("/api/uploadthing");
@@ -587,9 +587,7 @@ export default function FileList({
 										<TableBody>
 											{files
 												.filter((file: Document) => file.folderId === folder.id)
-												.map((file: Document) => {
-                          console.log({ folder, file });
-                          return (
+												.map((file: Document) => (
 													<TableRow key={file.id}>
 														<TableCell className="w-1/4">
 															<DraggableFile file={file}>
@@ -647,7 +645,7 @@ export default function FileList({
 																: "No due date"}
 														</TableCell>
 													</TableRow>
-												)})}
+												))}
 										</TableBody>
 									</Table>
 								</div>
