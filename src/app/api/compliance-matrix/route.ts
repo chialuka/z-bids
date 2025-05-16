@@ -6,8 +6,12 @@ export async function POST(req: Request) {
     const complianceMatrix = await fetch(`${process.env.API_URL}/rfp/compliance-matrix`, {
       method: "POST",
       body: JSON.stringify({ pdf_file_content, document_id }),
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
-    return NextResponse.json({ complianceMatrix });
+    const data = await complianceMatrix.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Error in compliance matrix:", error);
     return NextResponse.json({ error: "Error in compliance matrix" }, { status: 500 });

@@ -33,11 +33,19 @@ interface FileViewerProps {
 	onClose: () => void;
 	fileName: string;
 	documentContent: string;
+	documentId: number;
 	documentType:
 		| "coverSheet"
 		| "pdfContent"
 		| "complianceMatrix"
 		| "feasibilityCheck";
+	onRegenerate?: (params: {
+		documentId: number;
+		documentType:
+			| "coverSheet"
+			| "complianceMatrix"
+			| "feasibilityCheck";
+	}) => Promise<void>;
 }
 
 export default function FileViewer({
@@ -46,10 +54,13 @@ export default function FileViewer({
 	fileName,
 	documentContent,
 	documentType,
+	onRegenerate,
+	documentId,
 }: FileViewerProps) {
 	const [content, setContent] = useState<string>("");
 	const [jsonData, setJsonData] = useState<RfpData | null>(null);
 	const [downloadLoading, setDownloadLoading] = useState<boolean>(false);
+	const [regenerateLoading, setRegenerateLoading] = useState<boolean>(false);
 
 	useEffect(() => {
 		if (documentContent && documentType === "coverSheet") {
@@ -148,6 +159,21 @@ export default function FileViewer({
 			console.error("Error downloading file:", error);
 		} finally {
 			setDownloadLoading(false);
+		}
+	};
+
+	const handleRegenerate = async () => {
+		if (!onRegenerate) return;
+		
+		setRegenerateLoading(true);
+		try {
+      if (documentType !== "pdfContent") {
+        await onRegenerate({ documentType, documentId });
+      }
+		} catch (error) {
+			console.error("Error regenerating document:", error);
+		} finally {
+			setRegenerateLoading(false);
 		}
 	};
 
@@ -348,11 +374,20 @@ export default function FileViewer({
 			onClose={onClose}
 			size="full"
 			scrollBehavior="inside"
+			hideCloseButton
 		>
 			<ModalContent>
 				<ModalHeader className="flex flex-col gap-1">
 					<div className="flex items-center justify-between">
 						<h3 className="text-lg font-medium">{fileName}</h3>
+						<Button 
+							isIconOnly 
+							className="text-2xl bg-transparent" 
+							onPress={onClose}
+							aria-label="Close"
+						>
+							✕
+						</Button>
 					</div>
 				</ModalHeader>
 				<ModalBody className="flex gap-4 overflow-x-hidden pb-40">
@@ -854,7 +889,17 @@ export default function FileViewer({
 					</div>
 				</ModalBody>
 				<ModalFooter className="flex gap-2">
-					<div className="flex items-center space-x-2">
+					<div className="flex items-center space-x-6">
+						<Button
+							color="primary"
+							variant="faded"
+							onPress={handleRegenerate}
+							className="font-semibold"
+							isLoading={regenerateLoading}
+							isDisabled={!onRegenerate}
+						>
+							{regenerateLoading ? "Regenerating..." : "Regenerate"}
+						</Button>
 						<Button
 							color="primary"
 							variant="solid"
@@ -869,9 +914,6 @@ export default function FileViewer({
 								: "Download Document"}
 						</Button>
 					</div>
-					<Button color="danger" variant="light" onPress={onClose}>
-						Close
-					</Button>
 				</ModalFooter>
 			</ModalContent>
 		</Modal>
