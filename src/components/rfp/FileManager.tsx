@@ -1,15 +1,27 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Document, Folder } from "@/types";
 import FileList from "./FileList";
 import FileViewer from "./FileViewer";
-import { Button, Input, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import {
+	Button,
+	Input,
+	Modal,
+	ModalContent,
+	ModalHeader,
+	ModalBody,
+	ModalFooter,
+	Dropdown,
+	DropdownTrigger,
+	DropdownMenu,
+	DropdownItem,
+} from "@heroui/react";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import {
 	fetchAllDocuments,
-	parseExternalFile,
+	// parseExternalFile,
 	// saveDocument,
 } from "@/services/document";
 import { OpenFolderIcon } from "../icons/OpenFolderIcon";
@@ -35,6 +47,7 @@ export default function RFPFiles({
 	const [documentType, setDocumentType] = useState<
 		"coverSheet" | "pdfContent" | "complianceMatrix" | "feasibilityCheck"
 	>("coverSheet");
+  const [documentId, setDocumentId] = useState<number>(0);
 	const [processingStatus, setProcessingStatus] = useState<{
 		isProcessing: boolean;
 		isComplete: boolean;
@@ -52,6 +65,63 @@ export default function RFPFiles({
 	});
 	const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+
+	const fetcherFunctions = useMemo(() => ({
+		coverSheet: async ({
+			content,
+			documentId,
+		}: {
+			content: string;
+			documentId: number;
+		}) => {
+			const res = await fetch("/api/cover-sheet", {
+				method: "POST",
+				body: JSON.stringify({
+					document: content,
+					documentId: documentId,
+				}),
+			});
+			const data = await res.json();
+			return data.coverSheet;
+		},
+		complianceMatrix: async ({
+			content,
+			documentId,
+		}: {
+			content: string;
+			documentId: number;
+		}) => {
+			const res = await fetch("/api/compliance-matrix", {
+				method: "POST",
+				body: JSON.stringify({
+					pdf_file_content: content,
+					document_id: documentId,
+				}),
+			});
+			const data = await res.json();
+			return data.complianceMatrix;
+		},
+		feasibilityCheck: async ({
+			content,
+			documentId,
+		}: {
+			content: string;
+			documentId: number;
+		}) => {
+			const res = await fetch("/api/feasibility", {
+				method: "POST",
+				body: JSON.stringify({
+					content: content,
+					document_id: documentId,
+				}),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+			const data = await res.json();
+			return data.result;
+		},
+	}), []);
 
 	// Auto-hide success message after 3 seconds
 	useEffect(() => {
@@ -144,50 +214,54 @@ export default function RFPFiles({
 		};
 	}, []);
 
-  const addNewFolder = async ({ name }: { name: string }) => {
-    // Check if folder with same name already exists
-    const folderExists = folders.some(folder => folder.name.toLowerCase() === name.toLowerCase());
-    
-    if (!folderExists) {
-      const newFolder = {
-        id: folders[folders.length - 1] ? folders[folders.length - 1].id + 1 : 1,
-        name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      setFolders([...folders, newFolder]);
-      const res = await fetch("/api/supabase/folders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
+	const addNewFolder = async ({ name }: { name: string }) => {
+		// Check if folder with same name already exists
+		const folderExists = folders.some(
+			(folder) => folder.name.toLowerCase() === name.toLowerCase()
+		);
 
-      if (data.newFolder.id !== newFolder.id) {
-        setFolders([...folders, data.newFolder[0]]);
-      }
-    }
-  }
+		if (!folderExists) {
+			const newFolder = {
+				id: folders[folders.length - 1]
+					? folders[folders.length - 1].id + 1
+					: 1,
+				name,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			};
+			setFolders([...folders, newFolder]);
+			const res = await fetch("/api/supabase/folders", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ name }),
+			});
+			const data = await res.json();
+
+			if (data.newFolder.id !== newFolder.id) {
+				setFolders([...folders, data.newFolder[0]]);
+			}
+		}
+	};
 
 	// Function to move a file from one folder to another
 	const moveFile = async (fileId: number, targetFolderId: number) => {
 		try {
-      console.log("moving file", fileId, targetFolderId);
+			console.log("moving file", fileId, targetFolderId);
 			// Update local state
-			const updatedDocuments = documents.map(doc => 
+			const updatedDocuments = documents.map((doc) =>
 				doc.id === fileId ? { ...doc, folderId: targetFolderId } : doc
 			);
 			setDocuments(updatedDocuments);
-			
+
 			// Update in database
-			const docToUpdate = documents.find(doc => doc.id === fileId);
+			const docToUpdate = documents.find((doc) => doc.id === fileId);
 			if (docToUpdate) {
-				await fetch('/api/supabase/documents', {
-					method: 'PATCH',
+				await fetch("/api/supabase/documents", {
+					method: "PATCH",
 					headers: {
-						'Content-Type': 'application/json',
+						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
 						id: fileId,
@@ -196,7 +270,7 @@ export default function RFPFiles({
 				});
 			}
 		} catch (error) {
-			console.error('Error moving file:', error);
+			console.error("Error moving file:", error);
 			// Revert the state change if the API call fails
 			setDocuments([...documents]);
 		}
@@ -252,53 +326,27 @@ export default function RFPFiles({
 					};
 
 					let value = content[contentType];
-					if (!value && (contentType === "coverSheet" || contentType === "complianceMatrix" || contentType === "feasibilityCheck")) {
-						const fetcherFunctions = {
-							coverSheet: async () => {
-								const res = await fetch("/api/cover-sheet", {
-									method: "POST",
-									body: JSON.stringify({ document: documentExists.pdfContent, documentId: documentExists.id }),
-								});
-								const data = await res.json();
-								return data.coverSheet;
-							},
-							complianceMatrix: async () => {
-								const res = await fetch("/api/compliance-matrix", {
-									method: "POST",
-									body: JSON.stringify({
-										pdf_file_content: documentExists.pdfContent,
-										document_id: documentExists.id,
-									}),
-								});
-								const data = await res.json();
-								return data.complianceMatrix;
-							},
-							feasibilityCheck: async () => {
-								const res = await fetch("/api/feasibility", {
-									method: "POST",
-									body: JSON.stringify({
-										content: documentExists.complianceMatrix,
-										document_id: documentExists.id,
-									}),
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-								});
-								const data = await res.json();
-								return data.result;
-							},
-						};
-
-						const data = await fetcherFunctions[contentType]();
-            value = JSON.stringify(data);
+					if (
+						!value &&
+						(contentType === "coverSheet" ||
+							contentType === "complianceMatrix" ||
+							contentType === "feasibilityCheck")
+					) {
+						const data = await fetcherFunctions[contentType]({
+							content: contentType === "feasibilityCheck" ? documentExists.complianceMatrix : documentExists.pdfContent,
+							documentId: documentExists.id,
+						});
+						value = JSON.stringify(data);
 					}
 					setShownContent(value);
 					setDocumentType(contentType);
+					setDocumentId(documentExists.id);
 				} else {
-					console.log("Document doesn't exist, parsing and saving:", file.name);
-					const parsedContent = await parseExternalFile(file.name);
+					// console.log("Document doesn't exist, parsing and saving:", file.name);
+					// const parsedContent = await parseExternalFile(file.name);
 
-					setShownContent(parsedContent.sanitizedContent);
+					// setShownContent(parsedContent.sanitizedContent);
+
 
 					// Save the document only once
 					// await saveDocument({
@@ -319,18 +367,41 @@ export default function RFPFiles({
 				setIsModalOpen(true);
 			}
 		},
-		[]
+		[fetcherFunctions]
 	);
+
+	const handleRegenerate = async ({
+		documentType,
+		document,
+		documentId,
+	}: {
+		documentType: "coverSheet" | "complianceMatrix" | "feasibilityCheck";
+		document: string;
+		documentId: number;
+	}) => {
+		try {
+			setIsLoading(true);
+			console.log("handleRegenerate called");
+			const data = await fetcherFunctions[documentType]({ content: document, documentId });
+			const value = JSON.stringify(data);
+			setShownContent(value);
+			setDocumentType(documentType);
+		} catch (error) {
+			console.error("Error regenerating document:", error);
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
 	// Add folder editing and deletion functions
 	const editFolder = async (folderId: number, newName: string) => {
 		try {
 			// First update locally for immediate UI feedback
-			const updatedFolders = folders.map(folder => 
+			const updatedFolders = folders.map((folder) =>
 				folder.id === folderId ? { ...folder, name: newName } : folder
 			);
 			setFolders(updatedFolders);
-			
+
 			// Then update on the server
 			const res = await fetch("/api/supabase/folders", {
 				method: "PATCH",
@@ -339,7 +410,7 @@ export default function RFPFiles({
 				},
 				body: JSON.stringify({ id: folderId, name: newName }),
 			});
-			
+
 			const data = await res.json();
 			console.log("Updated folder:", data);
 		} catch (error) {
@@ -355,19 +426,19 @@ export default function RFPFiles({
 
 	const confirmDeleteFolder = async () => {
 		if (!folderToDelete) return;
-		
+
 		try {
 			const folderId = folderToDelete;
 			// Update files to remove folder association
-			const updatedDocuments = documents.map(doc => 
+			const updatedDocuments = documents.map((doc) =>
 				doc.folderId === folderId ? { ...doc, folderId: undefined } : doc
 			);
 			setDocuments(updatedDocuments);
-			
+
 			// Remove folder from state
-			const updatedFolders = folders.filter(folder => folder.id !== folderId);
+			const updatedFolders = folders.filter((folder) => folder.id !== folderId);
 			setFolders(updatedFolders);
-			
+
 			// Update on the server
 			const res = await fetch("/api/supabase/folders", {
 				method: "DELETE",
@@ -376,18 +447,20 @@ export default function RFPFiles({
 				},
 				body: JSON.stringify({ id: folderId }),
 			});
-			
+
 			const data = await res.json();
 			console.log("Deleted folder:", data);
-			
+
 			// Update files in database to remove folder association
-			const filesInFolder = documents.filter(doc => doc.folderId === folderId);
-			
+			const filesInFolder = documents.filter(
+				(doc) => doc.folderId === folderId
+			);
+
 			for (const file of filesInFolder) {
-				await fetch('/api/supabase/documents', {
-					method: 'PATCH',
+				await fetch("/api/supabase/documents", {
+					method: "PATCH",
 					headers: {
-						'Content-Type': 'application/json',
+						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
 						id: file.id,
@@ -450,11 +523,18 @@ export default function RFPFiles({
 							<DropdownTrigger>
 								<Button isIconOnly variant="ghost" size="sm">
 									<span className="sr-only">Open menu</span>
-									<svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>
+									<svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+										<circle cx="5" cy="12" r="2" fill="currentColor" />
+										<circle cx="12" cy="12" r="2" fill="currentColor" />
+										<circle cx="19" cy="12" r="2" fill="currentColor" />
+									</svg>
 								</Button>
 							</DropdownTrigger>
 							<DropdownMenu>
-								<DropdownItem key="add" onPress={() => setShowNewFolderInput(true)}>
+								<DropdownItem
+									key="add"
+									onPress={() => setShowNewFolderInput(true)}
+								>
 									Add New Folder
 								</DropdownItem>
 							</DropdownMenu>
@@ -469,7 +549,7 @@ export default function RFPFiles({
 								value={newFolderName}
 								onChange={(e) => setNewFolderName(e.target.value)}
 							/>
-							<Button 
+							<Button
 								onPress={() => {
 									if (newFolderName.trim()) {
 										addNewFolder({ name: newFolderName });
@@ -508,29 +588,34 @@ export default function RFPFiles({
 				fileName={openFileName}
 				documentContent={shownContent}
 				documentType={documentType}
+				documentId={documentId}
+				onRegenerate={handleRegenerate}
 			/>
 
 			{/* Delete Confirmation Modal */}
-			<Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
+			<Modal
+				isOpen={showDeleteConfirm}
+				onClose={() => setShowDeleteConfirm(false)}
+			>
 				<ModalContent>
 					<ModalHeader>
 						<h3>Delete Folder</h3>
 					</ModalHeader>
 					<ModalBody>
-						<p>Are you sure you want to delete this folder? Files inside will be moved to Uncategorized.</p>
+						<p>
+							Are you sure you want to delete this folder? Files inside will be
+							moved to Uncategorized.
+						</p>
 					</ModalBody>
 					<ModalFooter>
-						<Button 
-							color="danger" 
-							variant="solid" 
+						<Button
+							color="danger"
+							variant="solid"
 							onPress={confirmDeleteFolder}
 						>
 							Delete
 						</Button>
-						<Button 
-							variant="light" 
-							onPress={() => setShowDeleteConfirm(false)}
-						>
+						<Button variant="light" onPress={() => setShowDeleteConfirm(false)}>
 							Cancel
 						</Button>
 					</ModalFooter>
@@ -539,4 +624,3 @@ export default function RFPFiles({
 		</section>
 	);
 }
-
