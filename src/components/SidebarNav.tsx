@@ -82,7 +82,7 @@ export default function SidebarNav() {
             className={`text-2xl font-bold text-blue-600 transition-opacity duration-200 overflow-hidden whitespace-nowrap ${collapsed ? "opacity-0 w-0" : "opacity-100"}`}
             style={{ maxWidth: collapsed ? "0" : "100%" }}
           >
-            Z-Bids
+            Saccharo
           </div>
           <Button
             variant="ghost"
